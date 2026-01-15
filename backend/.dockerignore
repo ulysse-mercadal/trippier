@@ -5,3 +5,4 @@ npm-debug.log
 .gitignore
 Dockerfile
 docker-compose.yaml
+.env.example
