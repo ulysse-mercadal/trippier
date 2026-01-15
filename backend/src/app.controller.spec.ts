@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - API
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';

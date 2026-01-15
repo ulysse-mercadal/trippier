@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - API
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 

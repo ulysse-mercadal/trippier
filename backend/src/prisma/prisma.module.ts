@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - API
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import { Global, Module } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 

@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - Web App
+//
+//  By: Ulysse Mercadal
+//  Email: ulysse.mercadal@trippier.com
+//
+// **************************************************************************
+
 'use client';
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
@@ -6,7 +15,7 @@ import { useRouter } from 'next/navigation';
 
 interface AuthContextData {
   token: string | null;
-  user: any | null;
+  user: unknown | null;
   loading: boolean;
   login(email: string, pass: string): Promise<void>;
   register(email: string, pass: string, name: string): Promise<void>;
@@ -17,7 +26,7 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<unknown | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -36,7 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   async function login(email: string, pass: string) {
-    const response = await client.post('/auth/login', { email, password: pass });
+    const response = await client.post('/auth/login', {
+      email,
+      password: pass,
+    });
     const { access_token, user: userData } = response.data;
     setToken(access_token);
     setUser(userData);

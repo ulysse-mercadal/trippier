@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - Mobile App
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 module.exports = {
   root: true,
   extends: '@react-native',
@@ -12,11 +21,11 @@ module.exports = {
         '  Trippier Project - Mobile App',
         '',
         '  By: Ulysse Mercadal',
-        '  Email: ulysse.mercadal@trippier.com',
+        '  Email: ulyssemercadal@kakao.com',
         '',
         ' **************************************************************************',
       ],
-      2
+      2,
     ],
     'eol-last': ['error', 'always'],
     'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0 }],

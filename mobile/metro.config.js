@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - Mobile App
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 
 /**

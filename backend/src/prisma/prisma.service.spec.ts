@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - API
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from './prisma.service';
 
@@ -8,7 +17,6 @@ describe('PrismaService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [PrismaService],
     }).compile();
-
     service = module.get<PrismaService>(PrismaService);
   });
 

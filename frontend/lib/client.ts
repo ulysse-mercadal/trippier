@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - Web App
+//
+//  By: Ulysse Mercadal
+//  Email: ulysse.mercadal@trippier.com
+//
+// **************************************************************************
+
 import axios from 'axios';
 
 const client = axios.create({

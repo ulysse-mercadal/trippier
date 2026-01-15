@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - Mobile App
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import React from 'react';
 import {StatusBar, View, ActivityIndicator} from 'react-native';
 import {NavigationContainer, DarkTheme} from '@react-navigation/native';

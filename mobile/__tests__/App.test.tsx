@@ -1,6 +1,11 @@
-/**
- * @format
- */
+// **************************************************************************
+//
+//  Trippier Project - Mobile App
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
 
 import 'react-native';
 import React from 'react';

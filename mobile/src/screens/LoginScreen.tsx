@@ -3,7 +3,7 @@
 //  Trippier Project - Mobile App
 //
 //  By: Ulysse Mercadal
-//  Email: ulysse.mercadal@trippier.com
+//  Email: ulyssemercadal@kakao.com
 //
 // **************************************************************************
 

@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - API
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -15,14 +24,12 @@ export class AuthService {
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
-
     const hashedPassword = await bcrypt.hash(pass, 10);
     const user = await this.usersService.create({
       email,
       password: hashedPassword,
       name,
     });
-
     const { password, ...result } = user;
     return result;
   }
@@ -32,12 +39,10 @@ export class AuthService {
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
     const payload = { sub: user.id, email: user.email };
     return {
       access_token: await this.jwtService.signAsync(payload),

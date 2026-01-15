@@ -1,3 +1,12 @@
+// **************************************************************************
+//
+//  Trippier Project - Web App
+//
+//  By: Ulysse Mercadal
+//  Email: ulysse.mercadal@trippier.com
+//
+// **************************************************************************
+
 'use client';
 
 import React from 'react';
@@ -10,7 +19,6 @@ export default function ProfilePage() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6">
       <div className="w-full max-w-md">
         <h1 className="text-3xl font-bold mb-10 text-center text-black">Profile</h1>
-        
         {user && (
           <div className="mb-10">
             <div className="mb-6">
@@ -25,11 +33,9 @@ export default function ProfilePage() {
             )}
           </div>
         )}
-
         <button
           onClick={logout}
-          className="w-full h-12 border border-red-500 rounded-lg flex items-center justify-center text-red-500 font-bold hover:bg-red-50 transition-colors"
-        >
+          className="w-full h-12 border border-red-500 rounded-lg flex items-center justify-center text-red-500 font-bold hover:bg-red-50 transition-colors">
           Logout
         </button>
       </div>

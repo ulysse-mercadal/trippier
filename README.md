@@ -64,12 +64,18 @@ The generated file will be available at:
 
 ## 🤝 Contributing
 
-Before you start developing, plea
 
-se read our **[CONTRIBUTING.md](./CONTRIBUTING.md)** for:
 
-- Coding standards & Automatic formatting.
+Before you start developing, please read our **[CONTRIBUTING.md](./CONTRIBUTING.md)** for:
+
+
+
+- **Coding standards & Mandatory headers** (enforced across Mobile, API, and Web).
+
+- Automatic formatting.
+
 - Git workflow.
+
 - Troubleshooting.
 
 ---

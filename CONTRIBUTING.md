@@ -20,29 +20,27 @@ The settings in `.vscode/settings.json` will automatically trigger:
 
 ### 2. The Project Header
 
-Every file must start with the following header (automatically added on save):
+Every file must start with the project header (automatically added on save). Depending on the module you are working on (Mobile, API, or Web App), the header will adjust accordingly.
 
+Example:
 ```javascript
 // **************************************************************************
 //
-//  Trippier Project - Mobile App
+//  Trippier Project - [Module Name]
 //
 //  By: Ulysse Mercadal
-//  Email: ulysse.mercadal@trippier.com
+//  Email: ulyssemercadal@kakao.com
 //
 // **************************************************************************
 ```
 
 ### 3. Personalizing Your Header
-If you are a new contributor, you should update the ESLint configuration to include your own name and email in the headers you generate.
+If you are a new contributor, you should update the ESLint configuration in each module to include your own name and email in the headers you generate.
 
-1. Open `mobile/.eslintrc.js`.
+1. Open `mobile/.eslintrc.js`, `backend/eslint.config.mjs`, and `frontend/eslint.config.mjs`.
 2. Locate the `header/header` rule.
-3. Update the strings with your information:
-   ```javascript
-   'By: Your Name <your.email@example.com>'
-   ```
-4. Save the file. All future files you save will now feature your personal header.
+3. Update the strings with your information.
+4. Save the files. All future files you save will now feature your personal header.
 
 ### 4. Linting Commands
 
