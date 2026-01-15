@@ -1,66 +1,74 @@
-# Trippier
+# 🌍 Trippier
 
-Projet monorepo regroupant une application Web (Next.js), un Backend API (NestJS) et une application Mobile (React Native).
+Trippier is a complete travel planning ecosystem featuring a web dashboard, a mobile application, and a backend API.
 
-## 📂 Structure
+## 🏗 Architecture
 
-- **`/backend`** : API NestJS (Port 3001)
-- **`/frontend`** : Interface Web Next.js (Port 3000)
-- **`/mobile`** : Application React Native (Android/iOS)
-- **`/docker`** : Configuration des conteneurs
-- **`Makefile`** : Commandes simplifiées pour gérer le projet
+| Component    | Tech Stack                 | Port    |
+| ------------ | -------------------------- | ------- |
+| **Backend**  | NestJS, Prisma, PostgreSQL | `:3001` |
+| **Frontend** | Next.js, React, Tailwind   | `:3000` |
+| **Mobile**   | React Native               | -       |
 
-## 🚀 Démarrage Rapide (Docker)
+---
 
-### Prérequis
-- Docker
-- Make (optionnel, mais recommandé)
+## 🚀 Quick Start
 
-### 1. Lancer la Stack Web (Back + Front)
-Cette commande construit une image Docker unique (basée sur Alpine) qui lance le Backend et le Frontend en parallèle.
+### 1. Launch the Stack (DB + API + Web)
 
 ```bash
-make run-stack
+make up
 ```
 
-Une fois lancé :
-- **Frontend** : [http://localhost:3000](http://localhost:3000)
-- **Backend** : [http://localhost:3001](http://localhost:3001)
+- **Web**: [http://localhost:3000](http://localhost:3000)
+- **API**: [http://localhost:3001](http://localhost:3001)
 
-### 2. Générer l'APK Android
-Cette commande utilise un conteneur Docker avec le SDK Android pour compiler l'application mobile sans avoir besoin d'installer Android Studio sur votre machine.
+### 2. Launch Mobile (Android/iOS)
+
+```bash
+cd mobile
+npm install
+npm run android # or npm run ios
+```
+
+_Note: Run `adb reverse tcp:3001 tcp:3001` to connect your phone to the API._
+
+---
+
+## 🛠 Commands
+
+*   `make up`: Start services.
+*   `make down`: Stop services.
+*   `make fclean`: Deep clean (removes DB volumes and images).
+
+---
+
+## 📦 Building the Android APK
+
+You can build the production APK without installing the Android SDK on your host machine using our Docker builder.
 
 ```bash
 make build-apk
 ```
 
-L'APK généré se trouvera ici :
+**What this does:**
+1.  Builds a Docker image containing the Android SDK and Gradle.
+2.  Compiles the React Native code and Android assets.
+3.  Generates a signed (or unsigned) release APK.
+
+The generated file will be available at:
 `mobile/android/app/build/outputs/apk/release/app-release.apk`
 
 ---
 
-## 🛠 Développement Local (Sans Docker)
+## 🤝 Contributing
 
-Si vous souhaitez développer sur votre machine directement :
+Before you start developing, plea
 
-### Backend
-```bash
-cd backend
-npm install
-npm run start:dev
-```
+se read our **[CONTRIBUTING.md](./CONTRIBUTING.md)** for:
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+- Coding standards & Automatic formatting.
+- Git workflow.
+- Troubleshooting.
 
-### Mobile (Android)
-Nécessite Android Studio et le SDK Android configurés.
-```bash
-cd mobile
-npm install
-npm run android
-```
+---
