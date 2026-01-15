@@ -13,10 +13,10 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'npm'
@@ -27,7 +27,7 @@ jobs:
         run: npm ci
 
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -43,7 +43,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk # Verify exact filename if signed or unsigned
@@ -53,7 +53,7 @@ jobs:
 
       - name: Upload Artifact (on main push without tag)
         if: "!startsWith(github.ref, 'refs/tags/')"
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-release
           path: mobile/android/app/build/outputs/apk/release/*.apk
