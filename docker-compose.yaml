@@ -24,7 +24,7 @@ services:
     volumes:
       - ./backend:/app:z
       - /app/node_modules
-    command: npm run start:dev
+    command: sh -c "npx prisma migrate dev && npm run start:dev"
     depends_on:
       - db
     env_file:

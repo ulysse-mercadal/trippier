@@ -111,13 +111,11 @@ export default function LoginScreen() {
   };
 
   const handleSubmit = async () => {
-    // Basic fields check
     if (!email || !password || (mode === 'register' && !name)) {
       setError('Please fill in all fields');
       return;
     }
 
-    // Email validation regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       triggerShake(['email']);
@@ -125,7 +123,6 @@ export default function LoginScreen() {
       return;
     }
 
-    // Password validation (min 6 chars)
     if (password.length < 6) {
       triggerShake(['password']);
       setError('Password must be at least 6 characters');

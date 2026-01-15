@@ -3,7 +3,7 @@
 //  Trippier Project - Web App
 //
 //  By: Ulysse Mercadal
-//  Email: ulysse.mercadal@trippier.com
+//  Email: ulyssemercadal@kakao.com
 //
 // **************************************************************************
 
@@ -13,9 +13,15 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import client from '../lib/client';
 import { useRouter } from 'next/navigation';
 
+interface User {
+  id: number;
+  email: string;
+  name?: string;
+}
+
 interface AuthContextData {
   token: string | null;
-  user: unknown | null;
+  user: User | null;
   loading: boolean;
   login(email: string, pass: string): Promise<void>;
   register(email: string, pass: string, name: string): Promise<void>;
@@ -26,7 +32,7 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<unknown | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 

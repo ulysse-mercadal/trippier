@@ -14,7 +14,7 @@ module.exports = {
   rules: {
     'header/header': [
       'error',
-      'line', // Use line comments instead of block
+      'line',
       [
         ' **************************************************************************',
         '',

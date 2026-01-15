@@ -8,18 +8,18 @@
 // **************************************************************************
 
 import React from 'react';
-import {StatusBar, View, ActivityIndicator} from 'react-native';
-import {NavigationContainer, DarkTheme} from '@react-navigation/native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {SafeAreaProvider} from 'react-native-safe-area-context';
+import { StatusBar, View, ActivityIndicator } from 'react-native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import DiscoverScreen from './src/screens/DiscoverScreen';
 import PlanScreen from './src/screens/PlanScreen';
 import ConnectScreen from './src/screens/ConnectScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import CustomTabBar from './src/components/CustomTabBar';
-import {AuthProvider, useAuth} from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -48,29 +48,38 @@ function MainTabs() {
         component={DiscoverScreen}
         options={{
           tabBarLabel: 'Discover',
-        }} />
+        }}
+      />
       <Tab.Screen
         name="Plan"
         component={PlanScreen}
         options={{
           tabBarLabel: 'Plan',
-        }} />
+        }}
+      />
       <Tab.Screen
         name="Connect"
         component={ConnectScreen}
         options={{
           tabBarLabel: 'Connect',
-        }} />
+        }}
+      />
     </Tab.Navigator>
   );
 }
 
 function Navigation() {
-  const {token, loading} = useAuth();
+  const { token, loading } = useAuth();
 
   if (loading) {
     return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000'}}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#000',
+        }}>
         <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
@@ -78,7 +87,7 @@ function Navigation() {
 
   return (
     <NavigationContainer theme={NotionTheme}>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         {token == null ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (
