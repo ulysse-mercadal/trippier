@@ -11,7 +11,7 @@ down:
 # Arrête les services et supprime les volumes (Base de données), les images et les orphelins
 fclean:
 	docker-compose down -v --rmi all --remove-orphans
-	rm -rf backend/dist frontend/.next
+	sudo rm -rf backend/dist frontend/.next
 
 # Construit l'APK
 build-apk:
