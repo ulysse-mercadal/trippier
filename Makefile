@@ -16,5 +16,5 @@ fclean:
 # Construit l'APK
 build-apk:
 	docker build -f docker/builder-apk/Dockerfile -t trippier-builder .
-	docker run --rm -v $(PWD)/mobile:/app/mobile trippier-builder ./gradlew assembleRelease
+	docker run --rm -v $(PWD)/mobile:/app/mobile:z trippier-builder bash -c "cd android && chmod +x gradlew && ./gradlew assembleRelease"
 	@echo "APK generated in mobile/android/app/build/outputs/apk/release/"
