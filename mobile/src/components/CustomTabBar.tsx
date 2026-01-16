@@ -7,8 +7,8 @@
 //
 // **************************************************************************
 
-import React, { useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, TouchableOpacity, StyleSheet, Dimensions, Keyboard, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -24,6 +24,7 @@ const COLORS = {
 };
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+  const [visible, setVisible] = useState(true);
   const totalTabs = state.routes.length;
   const SCREEN_PADDING = 20;
   const TAB_BAR_WIDTH = width - SCREEN_PADDING * 2;
@@ -31,6 +32,23 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
   const AVAILABLE_WIDTH = TAB_BAR_WIDTH - INTERNAL_PADDING * 2;
   const TAB_WIDTH = AVAILABLE_WIDTH / totalTabs;
   const translateX = useSharedValue(state.index * TAB_WIDTH);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setVisible(false),
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setVisible(true),
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
   useEffect(() => {
     translateX.value = withSpring(state.index * TAB_WIDTH, {
       damping: 15,
@@ -44,6 +62,10 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
       transform: [{ translateX: translateX.value }],
     };
   });
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

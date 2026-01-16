@@ -18,6 +18,7 @@ interface PoiListViewProps {
   nearbyPois: POI[];
   loading: boolean;
   onPoiSelect: (poi: POI, layout?: LayoutInfo) => void;
+  onZoom: (poi: POI) => void;
 }
 
 export default function PoiListView({
@@ -26,31 +27,30 @@ export default function PoiListView({
   nearbyPois,
   loading,
   onPoiSelect,
+  onZoom,
 }: PoiListViewProps) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>Explore</Text>
       </View>
-
       {searchQuery ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>TOP RESULTS</Text>
           {searchResults.length > 0 ? (
             searchResults.map((poi, i) => (
-              <PoiCard key={poi.place_id || i} poi={poi} onPress={onPoiSelect} />
+              <PoiCard key={poi.place_id || i} poi={poi} onPress={onPoiSelect} onZoom={onZoom} />
             ))
           ) : !loading ? (
             <Text style={styles.emptyText}>No popular results found for "{searchQuery}"</Text>
           ) : null}
         </View>
       ) : null}
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{searchQuery ? 'FAMOUS NEARBY' : 'POPULAR NEARBY'}</Text>
         {nearbyPois.length > 0 ? (
           nearbyPois.map((poi, i) => (
-            <PoiCard key={poi.place_id || i} poi={poi} onPress={onPoiSelect} />
+            <PoiCard key={poi.place_id || i} poi={poi} onPress={onPoiSelect} onZoom={onZoom} />
           ))
         ) : loading ? (
           <View style={styles.loadingContainer}>
@@ -102,6 +102,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomSpacer: {
-    height: 80, // Space for bottom navigation/safe area
+    height: 80,
   },
 });

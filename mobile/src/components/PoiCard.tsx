@@ -22,9 +22,10 @@ export interface LayoutInfo {
 interface PoiCardProps {
   poi: POI;
   onPress: (poi: POI, layout?: LayoutInfo) => void;
+  onZoom?: (poi: POI) => void;
 }
 
-export default function PoiCard({ poi, onPress }: PoiCardProps) {
+export default function PoiCard({ poi, onPress, onZoom }: PoiCardProps) {
   const cardRef = useRef<View>(null);
 
   const handlePress = () => {
@@ -35,12 +36,25 @@ export default function PoiCard({ poi, onPress }: PoiCardProps) {
 
   return (
     <View ref={cardRef} collapsable={false}>
-      <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={handlePress}
+        activeOpacity={0.7}>
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.name} numberOfLines={1}>
               {poi.name}
             </Text>
+            {onZoom && (
+              <TouchableOpacity
+                onPress={() => onZoom(poi)}
+                style={styles.zoomButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="map-outline" size={20} color="#000000" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.row}>
             <View style={styles.distanceBadge}>
               <Text style={styles.distanceText}>
                 {poi.distance < 1
@@ -81,7 +95,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
   name: {
@@ -90,6 +109,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
     marginRight: 8,
+  },
+  zoomButton: {
+    padding: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
   },
   distanceBadge: {
     backgroundColor: '#EFF6FF',
