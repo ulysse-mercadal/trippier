@@ -13,6 +13,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import DiscoverScreen from './src/screens/DiscoverScreen';
 import PlanScreen from './src/screens/PlanScreen';
@@ -100,12 +101,14 @@ function Navigation() {
 
 function App(): React.JSX.Element {
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      <AuthProvider>
-        <Navigation />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <AuthProvider>
+          <Navigation />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

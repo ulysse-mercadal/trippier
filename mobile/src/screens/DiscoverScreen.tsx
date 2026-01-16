@@ -7,50 +7,350 @@
 //
 // **************************************************************************
 
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { Marker, LongPressEvent } from 'react-native-maps';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, Text, Dimensions, BackHandler } from 'react-native';
+import { Marker, Region } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import { useTheme } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import FilterBar from '../components/FilterBar';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import FilterBar, { FilterBarRef } from '../components/FilterBar';
+import PoiDetailView from '../components/PoiDetailView';
+import PoiListView from '../components/PoiListView';
+import client from '../api/client';
+import { POI } from '../lib/types';
+import { LayoutInfo } from '../components/PoiCard';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  useAnimatedGestureHandler,
+  runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedReaction,
+} from 'react-native-reanimated';
 
-interface CustomMarker {
-  id: number;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
-  type: 'Tourist' | 'Business' | 'Transport';
-}
-const FILTERS = ['Tourist', 'Business', 'Transport'] as const;
-const ICONS: Record<string, string> = {
-  Tourist: 'camera',
-  Business: 'briefcase',
-  Transport: 'bus',
-};
-const INITIAL_MARKERS: CustomMarker[] = [];
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
   const { colors } = useTheme();
-  const [markers, setMarkers] = useState<CustomMarker[]>(INITIAL_MARKERS);
-  const filteredMarkers = markers;
+  const mapRef = useRef<any>(null);
+  const listRef = useRef<any>(null);
+  const contentPanRef = useRef<any>(null);
+  const filterBarRef = useRef<FilterBarRef>(null);
 
-  const handleLongPress = (e: LongPressEvent) => {
-    const randomType = FILTERS[Math.floor(Math.random() * FILTERS.length)];
-    const newMarker: CustomMarker = {
-      id: Date.now(),
-      coordinate: e.nativeEvent.coordinate,
-      type: randomType,
+  const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+  const [searchResults, setSearchResults] = useState<POI[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
+  const [selectedPoiLayout, setSelectedPoiLayout] = useState<LayoutInfo | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentRegion, setCurrentRegion] = useState<Region>({
+    latitude: 48.8584,
+    longitude: 2.2945,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+
+  const SNAP_TOP = 0;
+  const SNAP_MEDIUM = SCREEN_HEIGHT * 0.33;
+  const SNAP_SMALL = SCREEN_HEIGHT * 0.66;
+  const SNAP_BOTTOM = SCREEN_HEIGHT;
+
+  const drawerTranslateY = useSharedValue(SNAP_BOTTOM);
+  const scrollY = useSharedValue(0);
+
+  const snapTo = useCallback(
+    (point: number) => {
+      drawerTranslateY.value = withSpring(point, { damping: 15 });
+    },
+    [drawerTranslateY],
+  );
+
+  useEffect(() => {
+    const backAction = () => {
+      if (drawerTranslateY.value < SNAP_BOTTOM - 10) {
+        snapTo(SNAP_BOTTOM);
+        return true;
+      }
+      return false;
     };
-    setMarkers([...markers, newMarker]);
-  };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [drawerTranslateY, snapTo, SNAP_BOTTOM]);
+
+  const handleDrawerCollapsed = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    filterBarRef.current?.blur();
+  }, []);
+
+  useAnimatedReaction(
+    () => drawerTranslateY.value,
+    (currentY, previousY) => {
+      if (currentY >= SNAP_BOTTOM - 5 && (previousY === null || previousY < SNAP_BOTTOM - 5)) {
+        runOnJS(handleDrawerCollapsed)();
+      }
+    },
+  );
+
+  const drawerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: drawerTranslateY.value }],
+    };
+  });
+
+  const scrollHandler = useAnimatedScrollHandler(event => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  const headerGestureHandler = useAnimatedGestureHandler({
+    onStart: (_: any, ctx: any) => {
+      ctx.startY = drawerTranslateY.value;
+    },
+    onActive: (event, ctx) => {
+      let nextY = ctx.startY + event.translationY;
+      if (nextY < SNAP_TOP - 50) {
+        nextY = SNAP_TOP - 50;
+      }
+      drawerTranslateY.value = nextY;
+    },
+    onEnd: event => {
+      const velocity = event.velocityY;
+      const currentY = drawerTranslateY.value;
+      let target = SNAP_MEDIUM;
+      const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
+      if (velocity < -500) {
+        if (currentY > SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else if (currentY > SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else {
+          target = SNAP_TOP;
+        }
+      } else if (velocity > 500) {
+        if (currentY < SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else if (currentY < SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else {
+          target = SNAP_BOTTOM;
+        }
+      } else {
+        target = points.reduce((prev, curr) =>
+          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev,
+        );
+      }
+      drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
+    },
+  });
+
+  const contentGestureHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx: any) => {
+      ctx.startY = drawerTranslateY.value;
+    },
+    onActive: (event, ctx) => {
+      const isAtTop = drawerTranslateY.value <= SNAP_TOP + 1;
+      if (isAtTop && scrollY.value > 0) {
+        return;
+      }
+      if (isAtTop && event.translationY < 0) {
+        return;
+      }
+      if ((isAtTop && event.translationY > 0 && scrollY.value <= 0) || !isAtTop) {
+        let nextY = ctx.startY + event.translationY;
+        if (nextY < SNAP_TOP - 50) {
+          nextY = SNAP_TOP - 50;
+        }
+        drawerTranslateY.value = nextY;
+      }
+    },
+    onEnd: event => {
+      const velocity = event.velocityY;
+      const currentY = drawerTranslateY.value;
+      let target = SNAP_MEDIUM;
+      const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
+      if (velocity < -500) {
+        if (currentY > SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else if (currentY > SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else {
+          target = SNAP_TOP;
+        }
+      } else if (velocity > 500) {
+        if (currentY < SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else if (currentY < SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else {
+          target = SNAP_BOTTOM;
+        }
+      } else {
+        target = points.reduce((prev, curr) =>
+          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev,
+        );
+      }
+      drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
+    },
+  });
+
+  const fetchNearby = useCallback(async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      const response = await client.get('/discover/nearby', {
+        params: { lat, lng, radius: 5 },
+      });
+      setNearbyPois(response.data);
+    } catch (error) {
+      console.error('Failed to fetch nearby POIs:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchSearch = useCallback(
+    async (lat: number, lng: number, q: string) => {
+      if (!q) {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        setLoading(true);
+        const response = await client.get('/discover/nearby', {
+          params: { lat, lng, radius: 50, q },
+        });
+        setSearchResults(response.data);
+        runOnJS(snapTo)(SNAP_MEDIUM);
+      } catch (error) {
+        console.error('Failed to fetch search results:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [snapTo, SNAP_MEDIUM],
+  );
+
+  const handleSearch = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      fetchSearch(currentRegion.latitude, currentRegion.longitude, text);
+    },
+    [currentRegion, fetchSearch],
+  );
+
+  const handleClear = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setFocusedPoi(null);
+    snapTo(SNAP_BOTTOM);
+  }, [snapTo, SNAP_BOTTOM]);
+
+  const handleFocus = useCallback(() => {
+    snapTo(SNAP_MEDIUM);
+  }, [snapTo, SNAP_MEDIUM]);
+
+  const handleBlur = useCallback(() => {}, []);
+
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      setCurrentRegion(region);
+      fetchNearby(region.latitude, region.longitude);
+    },
+    [fetchNearby],
+  );
+
+  const orderedSearchResults = useMemo(() => {
+    if (!focusedPoi) {
+      return searchResults;
+    }
+    const exists = searchResults.some(p => p.place_id === focusedPoi.place_id);
+    if (!exists) {
+      return searchResults;
+    }
+    return [focusedPoi, ...searchResults.filter(p => p.place_id !== focusedPoi.place_id)];
+  }, [searchResults, focusedPoi]);
+
+  const orderedNearbyPois = useMemo(() => {
+    if (!focusedPoi) {
+      return nearbyPois;
+    }
+    return [focusedPoi, ...nearbyPois.filter(p => p.place_id !== focusedPoi.place_id)];
+  }, [nearbyPois, focusedPoi]);
+
+  const handleZoomToPoi = useCallback(
+    (poi: POI) => {
+      const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
+      const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
+      setFocusedPoi(poi);
+      if (listRef.current && listRef.current.scrollTo) {
+        listRef.current.scrollTo({ y: 0, animated: true });
+      }
+      runOnJS(snapTo)(SNAP_SMALL);
+      mapRef.current?.animateToRegion(
+        {
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000,
+      );
+    },
+    [snapTo, SNAP_SMALL],
+  );
+
+  const handlePoiSelect = useCallback(
+    async (poi: POI, layout?: LayoutInfo) => {
+      setSelectedPoi(poi);
+      setFocusedPoi(poi);
+      setSelectedPoiLayout(layout);
+      handleZoomToPoi(poi);
+      try {
+        setLoading(true);
+        const response = await client.get('/discover/details', {
+          params: {
+            place_id: poi.place_id,
+            name: poi.name,
+            lat: poi.lat,
+            lng: poi.lng,
+          },
+        });
+        setSelectedPoi(prev =>
+          prev && prev.place_id === poi.place_id
+            ? {
+                ...prev,
+                description: response.data.description,
+                wikipediaUrl: response.data.wikipediaUrl,
+                wikivoyageUrl: response.data.wikivoyageUrl,
+                officialWebsite: response.data.website,
+                phoneNumber: response.data.phoneNumber,
+              }
+            : prev,
+        );
+      } catch (error) {
+        console.error('Failed to fetch POI details:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleZoomToPoi],
+  );
 
   const mapStyle = useMemo(() => {
     return [
-      { elementType: 'geometry', stylers: [{ color: '#212121' }] },
-      { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-      { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+      {
+        elementType: 'geometry',
+        stylers: [{ color: '#212121' }],
+      },
+      {
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#757575' }],
+      },
+      {
+        elementType: 'labels.text.stroke',
+        stylers: [{ color: '#212121' }],
+      },
       {
         featureType: 'administrative',
         elementType: 'geometry',
@@ -66,8 +366,14 @@ export default function DiscoverScreen() {
         elementType: 'geometry',
         stylers: [{ color: '#000000' }],
       },
-      { featureType: 'poi', stylers: [{ visibility: 'on' }] },
-      { featureType: 'transit', stylers: [{ visibility: 'on' }] },
+      {
+        featureType: 'poi',
+        stylers: [{ visibility: 'on' }],
+      },
+      {
+        featureType: 'transit',
+        stylers: [{ visibility: 'on' }],
+      },
     ];
   }, []);
 
@@ -92,28 +398,72 @@ export default function DiscoverScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ClusteredMapView
+        ref={mapRef}
         style={styles.map}
         customMapStyle={mapStyle}
-        initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-        onLongPress={handleLongPress}
+        initialRegion={currentRegion}
+        onRegionChangeComplete={handleRegionChangeComplete}
+        onPress={() => setFocusedPoi(null)}
         renderCluster={renderCluster}>
-        {filteredMarkers.map(marker => (
-          <Marker key={marker.id} coordinate={marker.coordinate} anchor={{ x: 0.5, y: 1 }}>
-            <View style={styles.markerPin}>
-              <Ionicons name="location" size={45} color="#FFFFFF" />
-              <View style={styles.markerIconContainer}>
-                <Ionicons name={ICONS[marker.type] || 'help-circle'} size={18} color="#000000" />
-              </View>
-            </View>
+        {focusedPoi && (
+          <Marker
+            coordinate={{
+              latitude:
+                typeof focusedPoi.lat === 'string' ? parseFloat(focusedPoi.lat) : focusedPoi.lat,
+              longitude:
+                typeof focusedPoi.lng === 'string' ? parseFloat(focusedPoi.lng) : focusedPoi.lng,
+            }}
+            anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.selectedMarker} />
           </Marker>
-        ))}
+        )}
       </ClusteredMapView>
-      <FilterBar />
+
+      {!selectedPoi && (
+        <FilterBar
+          ref={filterBarRef}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSearch={handleSearch}
+          onClear={handleClear}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+      )}
+
+      <Animated.View style={[styles.drawer, drawerStyle]}>
+        <PanGestureHandler onGestureEvent={headerGestureHandler}>
+          <Animated.View style={styles.gestureHeader}>
+            <View style={styles.drawerHandle} />
+          </Animated.View>
+        </PanGestureHandler>
+        <PanGestureHandler
+          ref={contentPanRef}
+          simultaneousHandlers={listRef}
+          onGestureEvent={contentGestureHandler}>
+          <Animated.View style={{ flex: 1 }}>
+            <PoiListView
+              ref={listRef}
+              scrollHandler={scrollHandler}
+              searchQuery={searchQuery}
+              searchResults={orderedSearchResults}
+              nearbyPois={orderedNearbyPois}
+              loading={loading}
+              onPoiSelect={handlePoiSelect}
+              onZoom={handleZoomToPoi}
+              highlightedPoiId={focusedPoi?.place_id}
+            />
+          </Animated.View>
+        </PanGestureHandler>
+      </Animated.View>
+      {selectedPoi && (
+        <PoiDetailView
+          selectedPoi={selectedPoi}
+          onClose={() => setSelectedPoi(null)}
+          loading={loading}
+          initialLayout={selectedPoiLayout}
+        />
+      )}
     </View>
   );
 }
@@ -125,19 +475,13 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  markerPin: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerIconContainer: {
-    position: 'absolute',
-    top: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
+  selectedMarker: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    borderWidth: 4,
+    borderColor: '#000000',
   },
   clusterContainer: {
     width: 36,
@@ -153,5 +497,37 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: SCREEN_HEIGHT,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 10,
+    zIndex: 1005,
+    paddingBottom: 50,
+  },
+  drawerHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+  },
+  gestureHeader: {
+    height: 40,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
 });
