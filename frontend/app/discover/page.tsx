@@ -95,45 +95,41 @@ export default function DiscoverPage() {
     [fetchNearby, fetchSearch, searchQuery],
   );
 
-  const handlePoiSelect = useCallback(
-    async (poi: POI | null) => {
-      setSelectedPoi(poi);
-      if (poi) {
-        const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
-        const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
-        lastCoords.current = { lat, lng };
-
-        try {
-          setLoading(true);
-          const response = await client.get('/discover/details', {
-            params: {
-              place_id: poi.place_id,
-              name: poi.name,
-              lat,
-              lng,
-            },
-          });
-          setSelectedPoi(prev =>
-            prev
-              ? {
-                  ...prev,
-                  description: response.data.description,
-                  wikipediaUrl: response.data.wikipediaUrl,
-                  wikivoyageUrl: response.data.wikivoyageUrl,
-                  officialWebsite: response.data.website,
-                  phoneNumber: response.data.phoneNumber,
-                }
-              : null,
-          );
-        } catch (error) {
-          console.error('Failed to fetch POI details:', error);
-        } finally {
-          setLoading(false);
-        }
+  const handlePoiSelect = useCallback(async (poi: POI | null) => {
+    setSelectedPoi(poi);
+    if (poi) {
+      const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
+      const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
+      lastCoords.current = { lat, lng };
+      try {
+        setLoading(true);
+        const response = await client.get('/discover/details', {
+          params: {
+            place_id: poi.place_id,
+            name: poi.name,
+            lat,
+            lng,
+          },
+        });
+        setSelectedPoi(prev =>
+          prev
+            ? {
+                ...prev,
+                description: response.data.description,
+                wikipediaUrl: response.data.wikipediaUrl,
+                wikivoyageUrl: response.data.wikivoyageUrl,
+                officialWebsite: response.data.website,
+                phoneNumber: response.data.phoneNumber,
+              }
+            : null,
+        );
+      } catch (error) {
+        console.error('Failed to fetch POI details:', error);
+      } finally {
+        setLoading(false);
       }
-    },
-    [client],
-  );
+    }
+  }, []);
 
   return (
     <div className="relative w-full h-full bg-white overflow-hidden">
