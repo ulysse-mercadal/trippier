@@ -7,45 +7,119 @@
 //
 // **************************************************************************
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { Marker, LongPressEvent } from 'react-native-maps';
+import { Marker, Region } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import { useTheme } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import FilterBar from '../components/FilterBar';
-
-interface CustomMarker {
-  id: number;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
-  type: 'Tourist' | 'Business' | 'Transport';
-}
-const FILTERS = ['Tourist', 'Business', 'Transport'] as const;
-const ICONS: Record<string, string> = {
-  Tourist: 'camera',
-  Business: 'briefcase',
-  Transport: 'bus',
-};
-const INITIAL_MARKERS: CustomMarker[] = [];
+import PoiDetailView from '../components/PoiDetailView';
+import client from '../api/client';
+import { POI } from '../lib/types';
+import { LayoutInfo } from '../components/PoiCard';
 
 export default function DiscoverScreen() {
   const { colors } = useTheme();
-  const [markers, setMarkers] = useState<CustomMarker[]>(INITIAL_MARKERS);
-  const filteredMarkers = markers;
+  const mapRef = useRef<any>(null); // ClusteredMapView ref
 
-  const handleLongPress = (e: LongPressEvent) => {
-    const randomType = FILTERS[Math.floor(Math.random() * FILTERS.length)];
-    const newMarker: CustomMarker = {
-      id: Date.now(),
-      coordinate: e.nativeEvent.coordinate,
-      type: randomType,
-    };
-    setMarkers([...markers, newMarker]);
-  };
+  const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+  const [searchResults, setSearchResults] = useState<POI[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [selectedPoiLayout, setSelectedPoiLayout] = useState<LayoutInfo | undefined>(undefined);
+  const [currentRegion, setCurrentRegion] = useState<Region>({
+    latitude: 48.8584,
+    longitude: 2.2945,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
 
+  const fetchNearby = useCallback(async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      const response = await client.get('/discover/nearby', {
+        params: { lat, lng, radius: 5 },
+      });
+      setNearbyPois(response.data);
+    } catch (error) {
+      console.error('Failed to fetch nearby POIs:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchSearch = useCallback(async (lat: number, lng: number, q: string) => {
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await client.get('/discover/nearby', {
+        params: { lat, lng, radius: 50, q },
+      });
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Failed to fetch search results:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSearch = useCallback(
+    (text: string) => {
+      fetchSearch(currentRegion.latitude, currentRegion.longitude, text);
+    },
+    [currentRegion, fetchSearch],
+  );
+
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      setCurrentRegion(region);
+      fetchNearby(region.latitude, region.longitude);
+    },
+    [fetchNearby],
+  );
+
+  const handlePoiSelect = useCallback(async (poi: POI, layout?: LayoutInfo) => {
+    setSelectedPoi(poi);
+    setSelectedPoiLayout(layout);
+    const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
+    const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
+    mapRef.current?.animateToRegion({
+      latitude: lat,
+      longitude: lng,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    }, 1000);
+    try {
+      setLoading(true);
+      const response = await client.get('/discover/details', {
+        params: {
+          place_id: poi.place_id,
+          name: poi.name,
+          lat,
+          lng,
+        },
+      });
+      setSelectedPoi(prev =>
+        prev && prev.place_id === poi.place_id
+          ? {
+              ...prev,
+              description: response.data.description,
+              wikipediaUrl: response.data.wikipediaUrl,
+              wikivoyageUrl: response.data.wikivoyageUrl,
+              officialWebsite: response.data.website,
+              phoneNumber: response.data.phoneNumber,
+            }
+          : prev,
+      );
+    } catch (error) {
+      console.error('Failed to fetch POI details:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   const mapStyle = useMemo(() => {
     return [
       { elementType: 'geometry', stylers: [{ color: '#212121' }] },
@@ -92,28 +166,44 @@ export default function DiscoverScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ClusteredMapView
+        ref={mapRef}
         style={styles.map}
         customMapStyle={mapStyle}
-        initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-        onLongPress={handleLongPress}
+        initialRegion={currentRegion}
+        onRegionChangeComplete={handleRegionChangeComplete}
         renderCluster={renderCluster}>
-        {filteredMarkers.map(marker => (
-          <Marker key={marker.id} coordinate={marker.coordinate} anchor={{ x: 0.5, y: 1 }}>
-            <View style={styles.markerPin}>
-              <Ionicons name="location" size={45} color="#FFFFFF" />
-              <View style={styles.markerIconContainer}>
-                <Ionicons name={ICONS[marker.type] || 'help-circle'} size={18} color="#000000" />
-              </View>
-            </View>
+        {selectedPoi && (
+          <Marker
+            coordinate={{
+              latitude:
+                typeof selectedPoi.lat === 'string'
+                  ? parseFloat(selectedPoi.lat)
+                  : selectedPoi.lat,
+              longitude:
+                typeof selectedPoi.lng === 'string'
+                  ? parseFloat(selectedPoi.lng)
+                  : selectedPoi.lng,
+            }}
+            anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.selectedMarker} />
           </Marker>
-        ))}
+        )}
       </ClusteredMapView>
-      <FilterBar />
+      <FilterBar
+        nearbyPois={nearbyPois}
+        searchResults={searchResults}
+        loading={loading}
+        onSearch={handleSearch}
+        onPoiSelect={handlePoiSelect}
+      />
+      {selectedPoi && (
+        <PoiDetailView
+          selectedPoi={selectedPoi}
+          onClose={() => setSelectedPoi(null)}
+          loading={loading}
+          initialLayout={selectedPoiLayout}
+        />
+      )}
     </View>
   );
 }
@@ -125,19 +215,13 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  markerPin: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerIconContainer: {
-    position: 'absolute',
-    top: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  selectedMarker: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#000000',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   clusterContainer: {
     width: 36,

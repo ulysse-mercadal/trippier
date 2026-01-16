@@ -7,7 +7,7 @@
 //
 // **************************************************************************
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -20,10 +20,27 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { POI } from '../lib/types';
+import PoiListView from './PoiListView';
+import { LayoutInfo } from './PoiCard';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('screen');
 
-const FilterBar = () => {
+interface FilterBarProps {
+  nearbyPois: POI[];
+  searchResults: POI[];
+  loading: boolean;
+  onSearch: (text: string) => void;
+  onPoiSelect: (poi: POI, layout?: LayoutInfo) => void;
+}
+
+const FilterBar = ({
+  nearbyPois,
+  searchResults,
+  loading,
+  onSearch,
+  onPoiSelect,
+}: FilterBarProps) => {
   const insets = useSafeAreaInsets();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -32,6 +49,13 @@ const FilterBar = () => {
   const animation = useRef(new Animated.Value(0)).current;
   const TOP_MARGIN = 12;
   const COLLAPSED_HEIGHT = 50;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onSearch(searchText);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchText, onSearch]);
 
   const toggleSearch = () => {
     if (!isExpanded && !isAnimating) {
@@ -61,8 +85,15 @@ const FilterBar = () => {
         setIsExpanded(false);
         setIsAnimating(false);
         setSearchText('');
+        onSearch('');
       });
     }
+  };
+
+  const handlePoiSelect = (poi: POI, layout?: LayoutInfo) => {
+    // We don't collapse here so the list stays open behind the detail view
+    // collapseSearch();
+    onPoiSelect(poi, layout);
   };
 
   const containerHeight = animation.interpolate({
@@ -130,7 +161,6 @@ const FilterBar = () => {
               value={searchText}
               onChangeText={setSearchText}
               returnKeyType="search"
-              onSubmitEditing={collapseSearch}
               disableFullscreenUI
               editable={isExpanded || isAnimating}
               pointerEvents={isExpanded ? 'auto' : 'none'}
@@ -139,9 +169,13 @@ const FilterBar = () => {
           </View>
           {isExpanded && (
             <Animated.View style={[styles.expandedContent, { opacity: animation }]}>
-              {
-                //TODO: sugest places to visit
-              }
+              <PoiListView
+                searchQuery={searchText}
+                searchResults={searchResults}
+                nearbyPois={nearbyPois}
+                loading={loading}
+                onPoiSelect={handlePoiSelect}
+              />
             </Animated.View>
           )}
         </Animated.View>

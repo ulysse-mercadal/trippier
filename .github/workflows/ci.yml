@@ -31,6 +31,10 @@ jobs:
         working-directory: ./backend
         run: npx prisma generate
 
+      - name: Lint
+        working-directory: ./backend
+        run: npm run lint
+
       - name: Run Tests
         working-directory: ./backend
         run: npm run test
@@ -55,6 +59,10 @@ jobs:
         working-directory: ./frontend
         run: npm ci
 
+      - name: Lint
+        working-directory: ./frontend
+        run: npm run lint
+
       - name: Build
         working-directory: ./frontend
         run: npm run build
@@ -77,6 +85,10 @@ jobs:
       - name: Install dependencies
         working-directory: ./mobile
         run: npm ci
+
+      - name: Lint
+        working-directory: ./mobile
+        run: npm run lint
 
       - name: Setup Java
         uses: actions/setup-java@v4
