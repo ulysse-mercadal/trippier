@@ -16,7 +16,6 @@ import { AxiosResponse } from 'axios';
 
 describe('DiscoverService', () => {
   let service: DiscoverService;
-  let httpService: HttpService;
 
   const mockHttpService = {
     get: jest.fn(),
@@ -40,9 +39,7 @@ describe('DiscoverService', () => {
         },
       ],
     }).compile();
-
     service = module.get<DiscoverService>(DiscoverService);
-    httpService = module.get<HttpService>(HttpService);
   });
 
   it('should be defined', () => {
@@ -50,16 +47,14 @@ describe('DiscoverService', () => {
   });
 
   it('should return points of interest', async () => {
-    const result: AxiosResponse = {
-      data: { poi: [{ name: 'Eiffel Tower', type: 'tourism' }] },
+    const result = {
+      data: [{ name: 'Eiffel Tower', type: 'tourism' }],
       status: 200,
       statusText: 'OK',
       headers: {},
-      config: { headers: {} as any },
-    };
-
+      config: { headers: {} },
+    } as AxiosResponse;
     mockHttpService.get.mockReturnValue(of(result));
-
     const pois = await service.findNearbyPOIs(48.8584, 2.2945);
     expect(pois).toEqual([{ name: 'Eiffel Tower', type: 'tourism' }]);
     expect(mockHttpService.get).toHaveBeenCalled();

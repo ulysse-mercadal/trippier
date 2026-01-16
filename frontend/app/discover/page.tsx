@@ -9,10 +9,12 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import FilterBar from '../../components/FilterBar';
+import client from '../../lib/client';
+import { POI } from '../../lib/types';
 
 const Map = dynamic(() => import('../../components/Map'), {
   ssr: false,
@@ -26,6 +28,12 @@ const Map = dynamic(() => import('../../components/Map'), {
 export default function DiscoverPage() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+  const [searchResults, setSearchResults] = useState<POI[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
 
   useEffect(() => {
     const checkSize = () => {
@@ -36,9 +44,68 @@ export default function DiscoverPage() {
     return () => window.removeEventListener('resize', checkSize);
   }, []);
 
+  const fetchNearby = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await client.get('/discover/nearby', {
+        params: { lat, lng, radius: 5 },
+      });
+      setNearbyPois(response.data);
+    } catch (error) {
+      console.error('Failed to fetch nearby POIs:', error);
+    }
+  }, []);
+
+  const fetchSearch = useCallback(async (lat: number, lng: number, q: string) => {
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      setLoading(true);
+      const response = await client.get('/discover/nearby', {
+        params: { lat, lng, radius: 50, q },
+      });
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Failed to fetch search results:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+    fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text);
+  };
+
+  const handleMapMove = (lat: number, lng: number) => {
+    lastCoords.current = { lat, lng };
+    if (!selectedPoi) {
+      fetchNearby(lat, lng);
+      if (searchQuery) {
+        fetchSearch(lat, lng, searchQuery);
+      }
+    }
+  };
+
+  const handlePoiSelect = (poi: POI | null) => {
+    setSelectedPoi(poi);
+  };
+
   return (
     <div className="relative w-full h-full bg-white overflow-hidden">
-      <FilterBar isExpanded={isExpanded} onToggle={setIsExpanded} isSmallScreen={isSmallScreen} />
+      <FilterBar
+        isExpanded={isExpanded}
+        onToggle={setIsExpanded}
+        isSmallScreen={isSmallScreen}
+        nearbyPois={nearbyPois}
+        searchResults={searchResults}
+        searchQuery={searchQuery}
+        loading={loading}
+        onSearch={handleSearch}
+        onPoiSelect={handlePoiSelect}
+        selectedPoi={selectedPoi}
+      />
       <motion.div
         className="absolute z-10 overflow-hidden shadow-2xl"
         initial={false}
@@ -50,7 +117,23 @@ export default function DiscoverPage() {
           borderRadius: isExpanded ? 24 : 0,
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-        <Map />
+        <Map
+          onCenterChanged={handleMapMove}
+          targetLocation={
+            selectedPoi
+              ? {
+                  lat:
+                    typeof selectedPoi.lat === 'string'
+                      ? parseFloat(selectedPoi.lat)
+                      : selectedPoi.lat,
+                  lng:
+                    typeof selectedPoi.lng === 'string'
+                      ? parseFloat(selectedPoi.lng)
+                      : selectedPoi.lng,
+                }
+              : null
+          }
+        />
       </motion.div>
     </div>
   );

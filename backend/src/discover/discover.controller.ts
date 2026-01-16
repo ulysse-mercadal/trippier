@@ -7,7 +7,7 @@
 //
 // **************************************************************************
 
-import { Controller, Get, Query, ParseFloatPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, ParseFloatPipe } from '@nestjs/common';
 import { DiscoverService } from './discover.service';
 
 @Controller('discover')
@@ -19,7 +19,8 @@ export class DiscoverController {
     @Query('lat', ParseFloatPipe) lat: number,
     @Query('lng', ParseFloatPipe) lng: number,
     @Query('radius') radius?: number,
+    @Query('q') q?: string,
   ) {
-    return this.discoverService.findNearbyPOIs(lat, lng, radius);
+    return this.discoverService.findNearbyPOIs(lat, lng, radius, q);
   }
 }
