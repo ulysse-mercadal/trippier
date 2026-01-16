@@ -7,63 +7,177 @@
 //
 // **************************************************************************
 
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { forwardRef } from 'react';
+
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+
+import Animated from 'react-native-reanimated';
+
 import { POI } from '../lib/types';
+
 import PoiCard, { LayoutInfo } from './PoiCard';
 
+
+
 interface PoiListViewProps {
+
   searchQuery: string;
+
   searchResults: POI[];
+
   nearbyPois: POI[];
+
   loading: boolean;
+
   onPoiSelect: (poi: POI, layout?: LayoutInfo) => void;
+
   onZoom: (poi: POI) => void;
+
+  scrollHandler?: any;
+
 }
 
-export default function PoiListView({
-  searchQuery,
-  searchResults,
-  nearbyPois,
-  loading,
-  onPoiSelect,
-  onZoom,
-}: PoiListViewProps) {
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Explore</Text>
-      </View>
-      {searchQuery ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>TOP RESULTS</Text>
-          {searchResults.length > 0 ? (
-            searchResults.map((poi, i) => (
-              <PoiCard key={poi.place_id || i} poi={poi} onPress={onPoiSelect} onZoom={onZoom} />
-            ))
-          ) : !loading ? (
-            <Text style={styles.emptyText}>No popular results found for "{searchQuery}"</Text>
-          ) : null}
+
+
+const PoiListView = forwardRef<any, PoiListViewProps>(
+
+
+
+  (
+
+
+
+    {
+
+      searchQuery,
+
+      searchResults,
+
+      nearbyPois,
+
+      loading,
+
+      onPoiSelect,
+
+      onZoom,
+
+      scrollHandler,
+
+    },
+
+    ref,
+
+  ) => {
+
+    return (
+
+      <Animated.ScrollView
+
+        ref={ref}
+
+        style={styles.container}
+
+        contentContainerStyle={styles.contentContainer}
+
+        onScroll={scrollHandler}
+
+        scrollEventThrottle={16}>
+
+        <View style={styles.header}>
+
+          <Text style={styles.title}>Explore</Text>
+
         </View>
-      ) : null}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{searchQuery ? 'FAMOUS NEARBY' : 'POPULAR NEARBY'}</Text>
-        {nearbyPois.length > 0 ? (
-          nearbyPois.map((poi, i) => (
-            <PoiCard key={poi.place_id || i} poi={poi} onPress={onPoiSelect} onZoom={onZoom} />
-          ))
-        ) : loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3B82F6" />
+
+        {searchQuery ? (
+
+          <View style={styles.section}>
+
+            <Text style={styles.sectionTitle}>TOP RESULTS</Text>
+
+            {searchResults.length > 0 ? (
+
+              searchResults.map((poi, i) => (
+
+                <PoiCard
+
+                  key={poi.place_id || i}
+
+                  poi={poi}
+
+                  onPress={onPoiSelect}
+
+                  onZoom={onZoom}
+
+                />
+
+              ))
+
+            ) : !loading ? (
+
+              <Text style={styles.emptyText}>No popular results found for "{searchQuery}"</Text>
+
+            ) : null}
+
           </View>
-        ) : (
-          <Text style={styles.emptyText}>No places found nearby.</Text>
-        )}
-      </View>
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
-  );
-}
+
+        ) : null}
+
+        <View style={styles.section}>
+
+          <Text style={styles.sectionTitle}>
+
+            {searchQuery ? 'FAMOUS NEARBY' : 'POPULAR NEARBY'}
+
+          </Text>
+
+          {nearbyPois.length > 0 ? (
+
+            nearbyPois.map((poi, i) => (
+
+              <PoiCard
+
+                key={poi.place_id || i}
+
+                poi={poi}
+
+                onPress={onPoiSelect}
+
+                onZoom={onZoom}
+
+              />
+
+            ))
+
+          ) : loading ? (
+
+            <View style={styles.loadingContainer}>
+
+              <ActivityIndicator size="large" color="#3B82F6" />
+
+            </View>
+
+          ) : (
+
+            <Text style={styles.emptyText}>No places found nearby.</Text>
+
+          )}
+
+        </View>
+
+        <View style={styles.bottomSpacer} />
+
+      </Animated.ScrollView>
+
+    );
+
+  },
+
+);
+
+
+
+export default PoiListView;
 
 const styles = StyleSheet.create({
   container: {

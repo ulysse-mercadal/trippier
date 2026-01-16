@@ -1,13 +1,4 @@
-// **************************************************************************
-//
-//  Trippier Project - Mobile App
-//
-//  By: Ulysse Mercadal
-//  Email: ulyssemercadal@kakao.com
-//
-// **************************************************************************
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import {
   StyleSheet,
   View,
@@ -20,75 +11,88 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FilterBarProps {
+  value?: string;
   onSearch: (text: string) => void;
   onClear: () => void;
+  onChangeText: (text: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
 }
 
-const FilterBar = ({ onSearch, onClear, onFocus, onBlur }: FilterBarProps) => {
-  const insets = useSafeAreaInsets();
-  const [isFocused, setIsFocused] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const inputRef = useRef<TextInput>(null);
+export interface FilterBarRef {
+  blur: () => void;
+}
 
-  const handleSearch = () => {
-    Keyboard.dismiss();
-    onSearch(searchText);
-  };
+const FilterBar = forwardRef<FilterBarRef, FilterBarProps>(
+  ({ value = '', onSearch, onClear, onChangeText, onFocus, onBlur }, ref) => {
+    const insets = useSafeAreaInsets();
+    const [isFocused, setIsFocused] = useState(false);
+    const inputRef = useRef<TextInput>(null);
 
-  const handleClear = () => {
-    setSearchText('');
-    onClear();
-    Keyboard.dismiss();
-    inputRef.current?.blur();
-  };
+    useImperativeHandle(ref, () => ({
+      blur: () => {
+        inputRef.current?.blur();
+        Keyboard.dismiss();
+      },
+    }));
 
-  const handleFocus = () => {
-    setIsFocused(true);
-    if (onFocus) onFocus();
-  };
+    const handleSearch = () => {
+      Keyboard.dismiss();
+      onSearch(value);
+    };
 
-  const handleBlur = () => {
-    setIsFocused(false);
-    if (onBlur) onBlur();
-  };
+    const handleClear = () => {
+      onClear();
+      Keyboard.dismiss();
+      inputRef.current?.blur();
+    };
 
-  return (
-    <View style={[styles.container, { top: insets.top + 12 }]}>
-      <View style={styles.bar}>
-        {isFocused || searchText ? (
-           <TouchableOpacity onPress={handleClear} style={styles.iconButton}>
-             <Ionicons name="arrow-back" size={24} color="#333" />
-           </TouchableOpacity>
-        ) : (
-           <View style={styles.iconButton}>
-             <Ionicons name="search" size={20} color="#333" />
-           </View>
-        )}
-        
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          placeholder="Discover new places"
-          placeholderTextColor="#666"
-          value={searchText}
-          onChangeText={setSearchText}
-          returnKeyType="search"
-          onSubmitEditing={handleSearch}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-        />
-        
-        {searchText.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchText('')} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={18} color="#999" />
-          </TouchableOpacity>
-        )}
+    const handleFocus = () => {
+      setIsFocused(true);
+      if (onFocus) onFocus();
+    };
+
+    const handleBlur = () => {
+      setIsFocused(false);
+      if (onBlur) onBlur();
+    };
+
+    return (
+      <View style={[styles.container, { top: insets.top + 12 }]}>
+        <View style={styles.bar}>
+          {isFocused || value ? (
+            <TouchableOpacity onPress={handleClear} style={styles.iconButton}>
+              <Ionicons name="arrow-back" size={24} color="#333" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.iconButton}>
+              <Ionicons name="search" size={20} color="#333" />
+            </View>
+          )}
+
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            placeholder="Discover new places"
+            placeholderTextColor="#666"
+            value={value}
+            onChangeText={onChangeText}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+
+          {value.length > 0 && (
+            <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={18} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  );
-};
+    );
+  },
+);
 
 const styles = StyleSheet.create({
   container: {

@@ -7,13 +7,13 @@
 //
 // **************************************************************************
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, Text, Dimensions } from 'react-native';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, Text, Dimensions, BackHandler } from 'react-native';
 import { Marker, Region } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import { useTheme } from '@react-navigation/native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
-import FilterBar from '../components/FilterBar';
+import FilterBar, { FilterBarRef } from '../components/FilterBar';
 import PoiDetailView from '../components/PoiDetailView';
 import PoiListView from '../components/PoiListView';
 import client from '../api/client';
@@ -26,6 +26,8 @@ import Animated, {
   withTiming,
   useAnimatedGestureHandler,
   runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedReaction,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,6 +37,9 @@ export default function DiscoverScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<any>(null);
+  const listRef = useRef<any>(null);
+  const contentPanRef = useRef<any>(null);
+  const filterBarRef = useRef<FilterBarRef>(null);
 
   const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
   const [searchResults, setSearchResults] = useState<POI[]>([]);
@@ -51,10 +56,64 @@ export default function DiscoverScreen() {
 
   // Snap points
   const SNAP_TOP = 0;
-  const SNAP_HALF = SCREEN_HEIGHT * 0.33; // Top at 1/3, showing 2/3
+  const SNAP_MEDIUM = SCREEN_HEIGHT * 0.33; // 2/3 visible
+  const SNAP_SMALL = SCREEN_HEIGHT * 0.66; // 1/3 visible
   const SNAP_BOTTOM = SCREEN_HEIGHT;
 
   const drawerTranslateY = useSharedValue(SNAP_BOTTOM);
+  const scrollY = useSharedValue(0);
+
+  const snapTo = useCallback((point: number) => {
+    drawerTranslateY.value = withSpring(point, { damping: 15 });
+  }, [drawerTranslateY]);
+
+  useEffect(() => {
+    const backAction = () => {
+      // Check if drawer is open (not at bottom)
+      // Using a threshold to determine if it's considered "open"
+      if (drawerTranslateY.value < SNAP_BOTTOM - 10) {
+        snapTo(SNAP_BOTTOM);
+        return true; // Prevent default behavior (exit)
+      }
+      return false; // Allow default behavior
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [drawerTranslateY, snapTo, SNAP_BOTTOM]);
+
+  const handleDrawerCollapsed = useCallback(() => {
+    // Only clear if we are not already cleared/empty, to avoid loop or unneeded renders
+    // But we can't easily check state inside reaction callback wrapper without refs or careful dependency management.
+    // Instead, we just trigger the clear action which handles state updates.
+    // However, clearing search also snaps to bottom. We need to avoid infinite loop.
+    // Actually handleClear snaps to bottom. If we are already at bottom (user dragged), calling handleClear sets state.
+    // This is fine.
+    
+    // We only want to clear if there is an active search/results to clear.
+    // Since we can't access state easily here without potential stale closures if not careful,
+    // we will blindly call a specific cleanup function.
+    // But we need to make sure handleClear doesn't force snap animation again if already there.
+    
+    // Actually, user said "remet la bar de recherche a l'etat pas trigger".
+    // This implies clearing the search query.
+    setSearchQuery('');
+    setSearchResults([]);
+    filterBarRef.current?.blur();
+  }, []);
+
+  useAnimatedReaction(
+    () => drawerTranslateY.value,
+    (currentY, previousY) => {
+      if (currentY >= SNAP_BOTTOM - 5 && (previousY === null || previousY < SNAP_BOTTOM - 5)) {
+        runOnJS(handleDrawerCollapsed)();
+      }
+    }
+  );
 
   const drawerStyle = useAnimatedStyle(() => {
     return {
@@ -62,8 +121,12 @@ export default function DiscoverScreen() {
     };
   });
 
-  const gestureHandler = useAnimatedGestureHandler({
-    onStart: (_, ctx: any) => {
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  const headerGestureHandler = useAnimatedGestureHandler({
+    onStart: (_: any, ctx: any) => {
       ctx.startY = drawerTranslateY.value;
     },
     onActive: (event, ctx) => {
@@ -75,30 +138,76 @@ export default function DiscoverScreen() {
       const velocity = event.velocityY;
       const currentY = drawerTranslateY.value;
       
-      let target = SNAP_HALF;
+      let target = SNAP_MEDIUM;
+      const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
 
       if (velocity < -500) {
-        target = SNAP_TOP;
+        // Swipe up
+        // Find next point up
+        if (currentY > SNAP_SMALL) target = SNAP_SMALL;
+        else if (currentY > SNAP_MEDIUM) target = SNAP_MEDIUM;
+        else target = SNAP_TOP;
       } else if (velocity > 500) {
-        if (currentY < SNAP_HALF) target = SNAP_HALF;
+        // Swipe down
+        if (currentY < SNAP_MEDIUM) target = SNAP_MEDIUM;
+        else if (currentY < SNAP_SMALL) target = SNAP_SMALL;
         else target = SNAP_BOTTOM;
       } else {
-        const distTop = Math.abs(currentY - SNAP_TOP);
-        const distHalf = Math.abs(currentY - SNAP_HALF);
-        const distBottom = Math.abs(currentY - SNAP_BOTTOM);
-
-        if (distTop < distHalf && distTop < distBottom) target = SNAP_TOP;
-        else if (distHalf < distTop && distHalf < distBottom) target = SNAP_HALF;
-        else target = SNAP_BOTTOM;
+        // Closest point
+        target = points.reduce((prev, curr) => 
+          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev
+        );
       }
 
       drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
     },
   });
 
-  const snapTo = useCallback((point: number) => {
-    drawerTranslateY.value = withSpring(point, { damping: 15 });
-  }, [drawerTranslateY]);
+  const contentGestureHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx: any) => {
+      ctx.startY = drawerTranslateY.value;
+    },
+    onActive: (event, ctx) => {
+      const isAtTop = drawerTranslateY.value <= SNAP_TOP + 1;
+      
+      if (isAtTop && scrollY.value > 0) {
+        return;
+      }
+
+      if (isAtTop && event.translationY < 0) {
+         return;
+      }
+
+      if ((isAtTop && event.translationY > 0 && scrollY.value <= 0) || !isAtTop) {
+          let nextY = ctx.startY + event.translationY;
+          if (nextY < SNAP_TOP - 50) nextY = SNAP_TOP - 50;
+          drawerTranslateY.value = nextY;
+      }
+    },
+    onEnd: (event) => {
+       const velocity = event.velocityY;
+       const currentY = drawerTranslateY.value;
+       
+       let target = SNAP_MEDIUM;
+       const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
+
+        if (velocity < -500) {
+            if (currentY > SNAP_SMALL) target = SNAP_SMALL;
+            else if (currentY > SNAP_MEDIUM) target = SNAP_MEDIUM;
+            else target = SNAP_TOP;
+        } else if (velocity > 500) {
+            if (currentY < SNAP_MEDIUM) target = SNAP_MEDIUM;
+            else if (currentY < SNAP_SMALL) target = SNAP_SMALL;
+            else target = SNAP_BOTTOM;
+        } else {
+            target = points.reduce((prev, curr) => 
+                Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev
+            );
+        }
+        
+        drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
+    }
+  });
 
   const fetchNearby = useCallback(async (lat: number, lng: number) => {
     try {
@@ -126,14 +235,14 @@ export default function DiscoverScreen() {
           params: { lat, lng, radius: 50, q },
         });
         setSearchResults(response.data);
-        runOnJS(snapTo)(SNAP_HALF);
+        runOnJS(snapTo)(SNAP_MEDIUM);
       } catch (error) {
         console.error('Failed to fetch search results:', error);
       } finally {
         setLoading(false);
       }
     },
-    [snapTo, SNAP_HALF],
+    [snapTo, SNAP_MEDIUM],
   );
 
   const handleSearch = useCallback(
@@ -151,8 +260,8 @@ export default function DiscoverScreen() {
   }, [snapTo, SNAP_BOTTOM]);
 
   const handleFocus = useCallback(() => {
-    snapTo(SNAP_HALF);
-  }, [snapTo, SNAP_HALF]);
+    snapTo(SNAP_MEDIUM);
+  }, [snapTo, SNAP_MEDIUM]);
 
   const handleBlur = useCallback(() => {}, []);
 
@@ -168,20 +277,28 @@ export default function DiscoverScreen() {
     const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
     const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
 
-    runOnJS(snapTo)(SNAP_HALF);
+    // Use SNAP_SMALL to see more map (1/3 drawer visible)
+    runOnJS(snapTo)(SNAP_SMALL);
 
-    const offsetLat = lat - 0.002;
-
+    // Offset latitude slightly to center POI in top 2/3 of screen
+    // Visible map height is approx 2/3 of screen.
+    // We want to center in that area.
+    // Center is 1/3 down from top.
+    
+    // Roughly keep the offset we had or adjust.
+    // If drawer is at 2/3 down (SNAP_SMALL), we have plenty of space.
+    // Centering on map is fine.
+    
     mapRef.current?.animateToRegion(
       {
-        latitude: offsetLat,
+        latitude: lat,
         longitude: lng,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       },
       1000,
     );
-  }, [snapTo, SNAP_HALF]);
+  }, [snapTo, SNAP_SMALL]);
 
   const handlePoiSelect = useCallback(
     async (poi: POI, layout?: LayoutInfo) => {
@@ -292,6 +409,9 @@ export default function DiscoverScreen() {
 
       {!selectedPoi && (
         <FilterBar
+          ref={filterBarRef}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
           onSearch={handleSearch}
           onClear={handleClear}
           onFocus={handleFocus}
@@ -301,21 +421,30 @@ export default function DiscoverScreen() {
 
       {/* Results Drawer */}
       <Animated.View style={[styles.drawer, drawerStyle]}>
-        <PanGestureHandler onGestureEvent={gestureHandler}>
+        <PanGestureHandler onGestureEvent={headerGestureHandler}>
           <Animated.View style={styles.gestureHeader}>
             <View style={styles.drawerHandle} />
           </Animated.View>
         </PanGestureHandler>
-        <View style={{flex: 1}}>
-           <PoiListView
-            searchQuery={searchQuery}
-            searchResults={searchResults}
-            nearbyPois={nearbyPois}
-            loading={loading}
-            onPoiSelect={handlePoiSelect}
-            onZoom={handleZoomToPoi}
-          />
-        </View>
+        
+        <PanGestureHandler 
+            ref={contentPanRef}
+            simultaneousHandlers={listRef}
+            onGestureEvent={contentGestureHandler}
+        >
+          <Animated.View style={{ flex: 1 }}>
+             <PoiListView
+              ref={listRef}
+              scrollHandler={scrollHandler}
+              searchQuery={searchQuery}
+              searchResults={searchResults}
+              nearbyPois={nearbyPois}
+              loading={loading}
+              onPoiSelect={handlePoiSelect}
+              onZoom={handleZoomToPoi}
+            />
+          </Animated.View>
+        </PanGestureHandler>
       </Animated.View>
 
       {selectedPoi && (
@@ -374,7 +503,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 10,
-    zIndex: 1005, 
+    zIndex: 1005,
     paddingBottom: 50,
   },
   drawerHandle: {
@@ -388,6 +517,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
 });
