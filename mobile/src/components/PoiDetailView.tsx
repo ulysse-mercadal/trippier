@@ -130,7 +130,6 @@ export default function PoiDetailView({
           <Ionicons name="arrow-back" size={24} color="#111827" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
-
         {selectedPoi.thumbnail && !imgError && (
           <View style={styles.imageContainer}>
             <Image
@@ -143,7 +142,6 @@ export default function PoiDetailView({
         )}
 
         <Text style={styles.name}>{selectedPoi.name}</Text>
-
         <View style={styles.ratingRow}>
           <View style={styles.ratingItem}>
             <Ionicons name="star" size={16} color="#F59E0B" />
@@ -178,13 +176,11 @@ export default function PoiDetailView({
             <Ionicons name="globe-outline" size={20} color="#9CA3AF" />
             <Text style={styles.sectionTitle}>ACTIONS & LINKS</Text>
           </View>
-
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.actionButton} onPress={openMaps}>
               <Text style={styles.actionButtonText}>Open in Google Maps</Text>
               <Ionicons name="map-outline" size={18} color="#000" />
             </TouchableOpacity>
-
             <View style={styles.row}>
               {selectedPoi.officialWebsite && (
                 <TouchableOpacity
@@ -238,12 +234,10 @@ export default function PoiDetailView({
             )}
           </View>
         </View>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>LOCATION</Text>
           <Text style={styles.addressText}>{selectedPoi.address}</Text>
         </View>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </Animated.View>
@@ -262,7 +256,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 100, // Ensure space for scrolling
+    paddingBottom: 100,
     flexGrow: 1,
   },
   backButton: {

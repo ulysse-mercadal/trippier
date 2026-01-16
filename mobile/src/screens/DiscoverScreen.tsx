@@ -23,19 +23,16 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   useAnimatedGestureHandler,
   runOnJS,
   useAnimatedScrollHandler,
   useAnimatedReaction,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const mapRef = useRef<any>(null);
   const listRef = useRef<any>(null);
   const contentPanRef = useRef<any>(null);
@@ -55,53 +52,34 @@ export default function DiscoverScreen() {
     longitudeDelta: 0.0421,
   });
 
-  // Snap points
   const SNAP_TOP = 0;
-  const SNAP_MEDIUM = SCREEN_HEIGHT * 0.33; // 2/3 visible
-  const SNAP_SMALL = SCREEN_HEIGHT * 0.66; // 1/3 visible
+  const SNAP_MEDIUM = SCREEN_HEIGHT * 0.33;
+  const SNAP_SMALL = SCREEN_HEIGHT * 0.66;
   const SNAP_BOTTOM = SCREEN_HEIGHT;
 
   const drawerTranslateY = useSharedValue(SNAP_BOTTOM);
   const scrollY = useSharedValue(0);
 
-  const snapTo = useCallback((point: number) => {
-    drawerTranslateY.value = withSpring(point, { damping: 15 });
-  }, [drawerTranslateY]);
+  const snapTo = useCallback(
+    (point: number) => {
+      drawerTranslateY.value = withSpring(point, { damping: 15 });
+    },
+    [drawerTranslateY],
+  );
 
   useEffect(() => {
     const backAction = () => {
-      // Check if drawer is open (not at bottom)
-      // Using a threshold to determine if it's considered "open"
       if (drawerTranslateY.value < SNAP_BOTTOM - 10) {
         snapTo(SNAP_BOTTOM);
-        return true; // Prevent default behavior (exit)
+        return true;
       }
-      return false; // Allow default behavior
+      return false;
     };
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction,
-    );
-
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
   }, [drawerTranslateY, snapTo, SNAP_BOTTOM]);
 
   const handleDrawerCollapsed = useCallback(() => {
-    // Only clear if we are not already cleared/empty, to avoid loop or unneeded renders
-    // But we can't easily check state inside reaction callback wrapper without refs or careful dependency management.
-    // Instead, we just trigger the clear action which handles state updates.
-    // However, clearing search also snaps to bottom. We need to avoid infinite loop.
-    // Actually handleClear snaps to bottom. If we are already at bottom (user dragged), calling handleClear sets state.
-    // This is fine.
-    
-    // We only want to clear if there is an active search/results to clear.
-    // Since we can't access state easily here without potential stale closures if not careful,
-    // we will blindly call a specific cleanup function.
-    // But we need to make sure handleClear doesn't force snap animation again if already there.
-    
-    // Actually, user said "remet la bar de recherche a l'etat pas trigger".
-    // This implies clearing the search query.
     setSearchQuery('');
     setSearchResults([]);
     filterBarRef.current?.blur();
@@ -113,7 +91,7 @@ export default function DiscoverScreen() {
       if (currentY >= SNAP_BOTTOM - 5 && (previousY === null || previousY < SNAP_BOTTOM - 5)) {
         runOnJS(handleDrawerCollapsed)();
       }
-    }
+    },
   );
 
   const drawerStyle = useAnimatedStyle(() => {
@@ -122,7 +100,7 @@ export default function DiscoverScreen() {
     };
   });
 
-  const scrollHandler = useAnimatedScrollHandler((event) => {
+  const scrollHandler = useAnimatedScrollHandler(event => {
     scrollY.value = event.contentOffset.y;
   });
 
@@ -132,34 +110,37 @@ export default function DiscoverScreen() {
     },
     onActive: (event, ctx) => {
       let nextY = ctx.startY + event.translationY;
-      if (nextY < SNAP_TOP - 50) nextY = SNAP_TOP - 50;
+      if (nextY < SNAP_TOP - 50) {
+        nextY = SNAP_TOP - 50;
+      }
       drawerTranslateY.value = nextY;
     },
-    onEnd: (event) => {
+    onEnd: event => {
       const velocity = event.velocityY;
       const currentY = drawerTranslateY.value;
-      
       let target = SNAP_MEDIUM;
       const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
-
       if (velocity < -500) {
-        // Swipe up
-        // Find next point up
-        if (currentY > SNAP_SMALL) target = SNAP_SMALL;
-        else if (currentY > SNAP_MEDIUM) target = SNAP_MEDIUM;
-        else target = SNAP_TOP;
+        if (currentY > SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else if (currentY > SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else {
+          target = SNAP_TOP;
+        }
       } else if (velocity > 500) {
-        // Swipe down
-        if (currentY < SNAP_MEDIUM) target = SNAP_MEDIUM;
-        else if (currentY < SNAP_SMALL) target = SNAP_SMALL;
-        else target = SNAP_BOTTOM;
+        if (currentY < SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else if (currentY < SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else {
+          target = SNAP_BOTTOM;
+        }
       } else {
-        // Closest point
-        target = points.reduce((prev, curr) => 
-          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev
+        target = points.reduce((prev, curr) =>
+          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev,
         );
       }
-
       drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
     },
   });
@@ -170,44 +151,48 @@ export default function DiscoverScreen() {
     },
     onActive: (event, ctx) => {
       const isAtTop = drawerTranslateY.value <= SNAP_TOP + 1;
-      
       if (isAtTop && scrollY.value > 0) {
         return;
       }
-
       if (isAtTop && event.translationY < 0) {
-         return;
+        return;
       }
-
       if ((isAtTop && event.translationY > 0 && scrollY.value <= 0) || !isAtTop) {
-          let nextY = ctx.startY + event.translationY;
-          if (nextY < SNAP_TOP - 50) nextY = SNAP_TOP - 50;
-          drawerTranslateY.value = nextY;
+        let nextY = ctx.startY + event.translationY;
+        if (nextY < SNAP_TOP - 50) {
+          nextY = SNAP_TOP - 50;
+        }
+        drawerTranslateY.value = nextY;
       }
     },
-    onEnd: (event) => {
-       const velocity = event.velocityY;
-       const currentY = drawerTranslateY.value;
-       
-       let target = SNAP_MEDIUM;
-       const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
-
-        if (velocity < -500) {
-            if (currentY > SNAP_SMALL) target = SNAP_SMALL;
-            else if (currentY > SNAP_MEDIUM) target = SNAP_MEDIUM;
-            else target = SNAP_TOP;
-        } else if (velocity > 500) {
-            if (currentY < SNAP_MEDIUM) target = SNAP_MEDIUM;
-            else if (currentY < SNAP_SMALL) target = SNAP_SMALL;
-            else target = SNAP_BOTTOM;
+    onEnd: event => {
+      const velocity = event.velocityY;
+      const currentY = drawerTranslateY.value;
+      let target = SNAP_MEDIUM;
+      const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
+      if (velocity < -500) {
+        if (currentY > SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else if (currentY > SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
         } else {
-            target = points.reduce((prev, curr) => 
-                Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev
-            );
+          target = SNAP_TOP;
         }
-        
-        drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
-    }
+      } else if (velocity > 500) {
+        if (currentY < SNAP_MEDIUM) {
+          target = SNAP_MEDIUM;
+        } else if (currentY < SNAP_SMALL) {
+          target = SNAP_SMALL;
+        } else {
+          target = SNAP_BOTTOM;
+        }
+      } else {
+        target = points.reduce((prev, curr) =>
+          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev,
+        );
+      }
+      drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
+    },
   });
 
   const fetchNearby = useCallback(async (lat: number, lng: number) => {
@@ -276,41 +261,44 @@ export default function DiscoverScreen() {
   );
 
   const orderedSearchResults = useMemo(() => {
-    if (!focusedPoi) return searchResults;
+    if (!focusedPoi) {
+      return searchResults;
+    }
     const exists = searchResults.some(p => p.place_id === focusedPoi.place_id);
-    if (!exists) return searchResults;
+    if (!exists) {
+      return searchResults;
+    }
     return [focusedPoi, ...searchResults.filter(p => p.place_id !== focusedPoi.place_id)];
   }, [searchResults, focusedPoi]);
 
   const orderedNearbyPois = useMemo(() => {
-    if (!focusedPoi) return nearbyPois;
+    if (!focusedPoi) {
+      return nearbyPois;
+    }
     return [focusedPoi, ...nearbyPois.filter(p => p.place_id !== focusedPoi.place_id)];
   }, [nearbyPois, focusedPoi]);
 
-  const handleZoomToPoi = useCallback((poi: POI) => {
-    const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
-    const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
-
-    setFocusedPoi(poi);
-
-    // Scroll to top of the list
-    if (listRef.current && listRef.current.scrollTo) {
+  const handleZoomToPoi = useCallback(
+    (poi: POI) => {
+      const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
+      const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
+      setFocusedPoi(poi);
+      if (listRef.current && listRef.current.scrollTo) {
         listRef.current.scrollTo({ y: 0, animated: true });
-    }
-
-    // Use SNAP_SMALL to see more map (1/3 drawer visible)
-    runOnJS(snapTo)(SNAP_SMALL);
-
-    mapRef.current?.animateToRegion(
-      {
-        latitude: lat,
-        longitude: lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      },
-      1000,
-    );
-  }, [snapTo, SNAP_SMALL]);
+      }
+      runOnJS(snapTo)(SNAP_SMALL);
+      mapRef.current?.animateToRegion(
+        {
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000,
+      );
+    },
+    [snapTo, SNAP_SMALL],
+  );
 
   const handlePoiSelect = useCallback(
     async (poi: POI, layout?: LayoutInfo) => {
@@ -318,7 +306,6 @@ export default function DiscoverScreen() {
       setFocusedPoi(poi);
       setSelectedPoiLayout(layout);
       handleZoomToPoi(poi);
-
       try {
         setLoading(true);
         const response = await client.get('/discover/details', {
@@ -352,9 +339,18 @@ export default function DiscoverScreen() {
 
   const mapStyle = useMemo(() => {
     return [
-      { elementType: 'geometry', stylers: [{ color: '#212121' }] },
-      { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-      { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+      {
+        elementType: 'geometry',
+        stylers: [{ color: '#212121' }],
+      },
+      {
+        elementType: 'labels.text.fill',
+        stylers: [{ color: '#757575' }],
+      },
+      {
+        elementType: 'labels.text.stroke',
+        stylers: [{ color: '#212121' }],
+      },
       {
         featureType: 'administrative',
         elementType: 'geometry',
@@ -370,8 +366,14 @@ export default function DiscoverScreen() {
         elementType: 'geometry',
         stylers: [{ color: '#000000' }],
       },
-      { featureType: 'poi', stylers: [{ visibility: 'on' }] },
-      { featureType: 'transit', stylers: [{ visibility: 'on' }] },
+      {
+        featureType: 'poi',
+        stylers: [{ visibility: 'on' }],
+      },
+      {
+        featureType: 'transit',
+        stylers: [{ visibility: 'on' }],
+      },
     ];
   }, []);
 
@@ -407,13 +409,9 @@ export default function DiscoverScreen() {
           <Marker
             coordinate={{
               latitude:
-                typeof focusedPoi.lat === 'string'
-                  ? parseFloat(focusedPoi.lat)
-                  : focusedPoi.lat,
+                typeof focusedPoi.lat === 'string' ? parseFloat(focusedPoi.lat) : focusedPoi.lat,
               longitude:
-                typeof focusedPoi.lng === 'string'
-                  ? parseFloat(focusedPoi.lng)
-                  : focusedPoi.lng,
+                typeof focusedPoi.lng === 'string' ? parseFloat(focusedPoi.lng) : focusedPoi.lng,
             }}
             anchor={{ x: 0.5, y: 0.5 }}>
             <View style={styles.selectedMarker} />
@@ -433,21 +431,18 @@ export default function DiscoverScreen() {
         />
       )}
 
-      {/* Results Drawer */}
       <Animated.View style={[styles.drawer, drawerStyle]}>
         <PanGestureHandler onGestureEvent={headerGestureHandler}>
           <Animated.View style={styles.gestureHeader}>
             <View style={styles.drawerHandle} />
           </Animated.View>
         </PanGestureHandler>
-        
-        <PanGestureHandler 
-            ref={contentPanRef}
-            simultaneousHandlers={listRef}
-            onGestureEvent={contentGestureHandler}
-        >
+        <PanGestureHandler
+          ref={contentPanRef}
+          simultaneousHandlers={listRef}
+          onGestureEvent={contentGestureHandler}>
           <Animated.View style={{ flex: 1 }}>
-             <PoiListView
+            <PoiListView
               ref={listRef}
               scrollHandler={scrollHandler}
               searchQuery={searchQuery}
@@ -461,7 +456,6 @@ export default function DiscoverScreen() {
           </Animated.View>
         </PanGestureHandler>
       </Animated.View>
-
       {selectedPoi && (
         <PoiDetailView
           selectedPoi={selectedPoi}

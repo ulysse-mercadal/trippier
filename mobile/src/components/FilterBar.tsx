@@ -1,12 +1,14 @@
+// **************************************************************************
+//
+//  Trippier Project - Mobile App
+//
+//  By: Ulysse Mercadal
+//  Email: ulyssemercadal@kakao.com
+//
+// **************************************************************************
+
 import React, { useState, useRef, forwardRef, useImperativeHandle } from 'react';
-import {
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  TextInput,
-  Keyboard,
-  Platform,
-} from 'react-native';
+import { StyleSheet, View, TouchableOpacity, TextInput, Keyboard, Platform } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -49,12 +51,16 @@ const FilterBar = forwardRef<FilterBarRef, FilterBarProps>(
 
     const handleFocus = () => {
       setIsFocused(true);
-      if (onFocus) onFocus();
+      if (onFocus) {
+        onFocus();
+      }
     };
 
     const handleBlur = () => {
       setIsFocused(false);
-      if (onBlur) onBlur();
+      if (onBlur) {
+        onBlur();
+      }
     };
 
     return (
@@ -69,7 +75,6 @@ const FilterBar = forwardRef<FilterBarRef, FilterBarProps>(
               <Ionicons name="search" size={20} color="#333" />
             </View>
           )}
-
           <TextInput
             ref={inputRef}
             style={styles.input}
@@ -82,7 +87,6 @@ const FilterBar = forwardRef<FilterBarRef, FilterBarProps>(
             onFocus={handleFocus}
             onBlur={handleBlur}
           />
-
           {value.length > 0 && (
             <TouchableOpacity onPress={() => onChangeText('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={18} color="#999" />

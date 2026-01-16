@@ -52,7 +52,6 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
         {searchQuery ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>TOP RESULTS</Text>
-
             {searchResults.length > 0 ? (
               searchResults.map((poi, i) => (
                 <PoiCard
@@ -73,7 +72,6 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
           <Text style={styles.sectionTitle}>
             {searchQuery ? 'FAMOUS NEARBY' : 'POPULAR NEARBY'}
           </Text>
-
           {nearbyPois.length > 0 ? (
             nearbyPois.map((poi, i) => (
               <PoiCard
@@ -92,7 +90,6 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
             <Text style={styles.emptyText}>No places found nearby.</Text>
           )}
         </View>
-
         <View style={styles.bottomSpacer} />
       </Animated.ScrollView>
     );
