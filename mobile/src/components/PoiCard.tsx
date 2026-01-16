@@ -23,9 +23,10 @@ interface PoiCardProps {
   poi: POI;
   onPress: (poi: POI, layout?: LayoutInfo) => void;
   onZoom?: (poi: POI) => void;
+  isHighlighted?: boolean;
 }
 
-export default function PoiCard({ poi, onPress, onZoom }: PoiCardProps) {
+export default function PoiCard({ poi, onPress, onZoom, isHighlighted }: PoiCardProps) {
   const cardRef = useRef<View>(null);
 
   const handlePress = () => {
@@ -37,7 +38,7 @@ export default function PoiCard({ poi, onPress, onZoom }: PoiCardProps) {
   return (
     <View ref={cardRef} collapsable={false}>
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, isHighlighted && styles.highlightedCard]}
         onPress={handlePress}
         activeOpacity={0.7}>
         <View style={styles.content}>
@@ -88,6 +89,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     marginHorizontal: 4,
+  },
+  highlightedCard: {
+    borderColor: '#000000',
+    borderWidth: 4,
   },
   content: {
     flex: 1,

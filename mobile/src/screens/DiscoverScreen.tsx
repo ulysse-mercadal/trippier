@@ -45,6 +45,7 @@ export default function DiscoverScreen() {
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
   const [selectedPoiLayout, setSelectedPoiLayout] = useState<LayoutInfo | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentRegion, setCurrentRegion] = useState<Region>({
@@ -256,6 +257,7 @@ export default function DiscoverScreen() {
   const handleClear = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
+    setFocusedPoi(null);
     snapTo(SNAP_BOTTOM);
   }, [snapTo, SNAP_BOTTOM]);
 
@@ -273,22 +275,32 @@ export default function DiscoverScreen() {
     [fetchNearby],
   );
 
+  const orderedSearchResults = useMemo(() => {
+    if (!focusedPoi) return searchResults;
+    const exists = searchResults.some(p => p.place_id === focusedPoi.place_id);
+    if (!exists) return searchResults;
+    return [focusedPoi, ...searchResults.filter(p => p.place_id !== focusedPoi.place_id)];
+  }, [searchResults, focusedPoi]);
+
+  const orderedNearbyPois = useMemo(() => {
+    if (!focusedPoi) return nearbyPois;
+    return [focusedPoi, ...nearbyPois.filter(p => p.place_id !== focusedPoi.place_id)];
+  }, [nearbyPois, focusedPoi]);
+
   const handleZoomToPoi = useCallback((poi: POI) => {
     const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
     const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
 
+    setFocusedPoi(poi);
+
+    // Scroll to top of the list
+    if (listRef.current && listRef.current.scrollTo) {
+        listRef.current.scrollTo({ y: 0, animated: true });
+    }
+
     // Use SNAP_SMALL to see more map (1/3 drawer visible)
     runOnJS(snapTo)(SNAP_SMALL);
 
-    // Offset latitude slightly to center POI in top 2/3 of screen
-    // Visible map height is approx 2/3 of screen.
-    // We want to center in that area.
-    // Center is 1/3 down from top.
-    
-    // Roughly keep the offset we had or adjust.
-    // If drawer is at 2/3 down (SNAP_SMALL), we have plenty of space.
-    // Centering on map is fine.
-    
     mapRef.current?.animateToRegion(
       {
         latitude: lat,
@@ -303,6 +315,7 @@ export default function DiscoverScreen() {
   const handlePoiSelect = useCallback(
     async (poi: POI, layout?: LayoutInfo) => {
       setSelectedPoi(poi);
+      setFocusedPoi(poi);
       setSelectedPoiLayout(layout);
       handleZoomToPoi(poi);
 
@@ -388,18 +401,19 @@ export default function DiscoverScreen() {
         customMapStyle={mapStyle}
         initialRegion={currentRegion}
         onRegionChangeComplete={handleRegionChangeComplete}
+        onPress={() => setFocusedPoi(null)}
         renderCluster={renderCluster}>
-        {selectedPoi && (
+        {focusedPoi && (
           <Marker
             coordinate={{
               latitude:
-                typeof selectedPoi.lat === 'string'
-                  ? parseFloat(selectedPoi.lat)
-                  : selectedPoi.lat,
+                typeof focusedPoi.lat === 'string'
+                  ? parseFloat(focusedPoi.lat)
+                  : focusedPoi.lat,
               longitude:
-                typeof selectedPoi.lng === 'string'
-                  ? parseFloat(selectedPoi.lng)
-                  : selectedPoi.lng,
+                typeof focusedPoi.lng === 'string'
+                  ? parseFloat(focusedPoi.lng)
+                  : focusedPoi.lng,
             }}
             anchor={{ x: 0.5, y: 0.5 }}>
             <View style={styles.selectedMarker} />
@@ -437,11 +451,12 @@ export default function DiscoverScreen() {
               ref={listRef}
               scrollHandler={scrollHandler}
               searchQuery={searchQuery}
-              searchResults={searchResults}
-              nearbyPois={nearbyPois}
+              searchResults={orderedSearchResults}
+              nearbyPois={orderedNearbyPois}
               loading={loading}
               onPoiSelect={handlePoiSelect}
               onZoom={handleZoomToPoi}
+              highlightedPoiId={focusedPoi?.place_id}
             />
           </Animated.View>
         </PanGestureHandler>
@@ -467,12 +482,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   selectedMarker: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#000000',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 4,
+    borderColor: '#000000',
   },
   clusterContainer: {
     width: 36,
