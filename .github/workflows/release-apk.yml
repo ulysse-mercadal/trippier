@@ -5,58 +5,49 @@ on:
     branches:
       - main
     tags:
-      - 'v*' # Trigger also on tags like v1.0.0
+      - 'v*'
 
 jobs:
   build-android:
     runs-on: ubuntu-24.04
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'npm'
           cache-dependency-path: mobile/package-lock.json
-
       - name: Install Dependencies
         working-directory: ./mobile
         run: npm ci
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
       - name: Create .env file
         working-directory: ./mobile
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
           echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
-
       - name: Build APK
         working-directory: ./mobile/android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease
-
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk # Verify exact filename if signed or unsigned
+          files: mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Upload Artifact (on main push without tag)
         if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4

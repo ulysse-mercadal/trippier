@@ -8,7 +8,15 @@
 // **************************************************************************
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { View, StyleSheet, Text, Dimensions, BackHandler } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Text,
+  Dimensions,
+  BackHandler,
+  PermissionsAndroid,
+  Platform,
+} from 'react-native';
 import { Marker, Region } from 'react-native-maps';
 import ClusteredMapView from 'react-native-map-clustering';
 import { useTheme } from '@react-navigation/native';
@@ -32,18 +40,19 @@ import Animated, {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
-  const { colors } = useTheme();
-  const mapRef = useRef<any>(null);
-  const listRef = useRef<any>(null);
-  const contentPanRef = useRef<any>(null);
-  const filterBarRef = useRef<FilterBarRef>(null);
+    const { colors } = useTheme();
+    const mapRef = useRef<any>(null);
+    const listRef = useRef<any>(null);
+    const filterBarRef = useRef<FilterBarRef>(null);
 
-  const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+    const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
   const [selectedPoiLayout, setSelectedPoiLayout] = useState<LayoutInfo | undefined>(undefined);
+  const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentRegion, setCurrentRegion] = useState<Region>({
     latitude: 48.8584,
@@ -56,9 +65,9 @@ export default function DiscoverScreen() {
   const SNAP_MEDIUM = SCREEN_HEIGHT * 0.33;
   const SNAP_SMALL = SCREEN_HEIGHT * 0.66;
   const SNAP_BOTTOM = SCREEN_HEIGHT;
-
   const drawerTranslateY = useSharedValue(SNAP_BOTTOM);
   const scrollY = useSharedValue(0);
+  const handleBlur = useCallback(() => {}, []);
 
   const snapTo = useCallback(
     (point: number) => {
@@ -67,8 +76,46 @@ export default function DiscoverScreen() {
     [drawerTranslateY],
   );
 
+  const fetchNearby = useCallback(async (lat: number, lng: number, radius?: number) => {
+    try {
+      setLoading(true);
+      const response = await client.get('/discover/nearby', {
+        params: { lat, lng, radius: radius || 5 },
+      });
+      setNearbyPois(response.data);
+    } catch (error) {
+      console.error('Failed to fetch nearby POIs:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const requestLocationPermission = useCallback(async () => {
+    if (Platform.OS === 'android') {
+      try {
+        await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION, {
+          title: 'Location Permission',
+          message: 'Trippier needs access to your location to show nearby places.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        });
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+  }, []);
+  useEffect(() => {
+    requestLocationPermission();
+    fetchNearby(currentRegion.latitude, currentRegion.longitude);
+  }, [currentRegion.latitude, currentRegion.longitude, fetchNearby, requestLocationPermission]);
+
   useEffect(() => {
     const backAction = () => {
+      if (selectedPoi) {
+        setSelectedPoi(null);
+        return true;
+      }
       if (drawerTranslateY.value < SNAP_BOTTOM - 10) {
         snapTo(SNAP_BOTTOM);
         return true;
@@ -77,14 +124,13 @@ export default function DiscoverScreen() {
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [drawerTranslateY, snapTo, SNAP_BOTTOM]);
+  }, [selectedPoi, drawerTranslateY, snapTo, SNAP_BOTTOM]);
 
   const handleDrawerCollapsed = useCallback(() => {
     setSearchQuery('');
     setSearchResults([]);
     filterBarRef.current?.blur();
   }, []);
-
   useAnimatedReaction(
     () => drawerTranslateY.value,
     (currentY, previousY) => {
@@ -145,70 +191,6 @@ export default function DiscoverScreen() {
     },
   });
 
-  const contentGestureHandler = useAnimatedGestureHandler({
-    onStart: (_, ctx: any) => {
-      ctx.startY = drawerTranslateY.value;
-    },
-    onActive: (event, ctx) => {
-      const isAtTop = drawerTranslateY.value <= SNAP_TOP + 1;
-      if (isAtTop && scrollY.value > 0) {
-        return;
-      }
-      if (isAtTop && event.translationY < 0) {
-        return;
-      }
-      if ((isAtTop && event.translationY > 0 && scrollY.value <= 0) || !isAtTop) {
-        let nextY = ctx.startY + event.translationY;
-        if (nextY < SNAP_TOP - 50) {
-          nextY = SNAP_TOP - 50;
-        }
-        drawerTranslateY.value = nextY;
-      }
-    },
-    onEnd: event => {
-      const velocity = event.velocityY;
-      const currentY = drawerTranslateY.value;
-      let target = SNAP_MEDIUM;
-      const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
-      if (velocity < -500) {
-        if (currentY > SNAP_SMALL) {
-          target = SNAP_SMALL;
-        } else if (currentY > SNAP_MEDIUM) {
-          target = SNAP_MEDIUM;
-        } else {
-          target = SNAP_TOP;
-        }
-      } else if (velocity > 500) {
-        if (currentY < SNAP_MEDIUM) {
-          target = SNAP_MEDIUM;
-        } else if (currentY < SNAP_SMALL) {
-          target = SNAP_SMALL;
-        } else {
-          target = SNAP_BOTTOM;
-        }
-      } else {
-        target = points.reduce((prev, curr) =>
-          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev,
-        );
-      }
-      drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
-    },
-  });
-
-  const fetchNearby = useCallback(async (lat: number, lng: number) => {
-    try {
-      setLoading(true);
-      const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 5 },
-      });
-      setNearbyPois(response.data);
-    } catch (error) {
-      console.error('Failed to fetch nearby POIs:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const fetchSearch = useCallback(
     async (lat: number, lng: number, q: string) => {
       if (!q) {
@@ -250,12 +232,11 @@ export default function DiscoverScreen() {
     snapTo(SNAP_MEDIUM);
   }, [snapTo, SNAP_MEDIUM]);
 
-  const handleBlur = useCallback(() => {}, []);
-
   const handleRegionChangeComplete = useCallback(
     (region: Region) => {
       setCurrentRegion(region);
-      fetchNearby(region.latitude, region.longitude);
+      const calculatedRadius = Math.min(Math.max(region.latitudeDelta * 111, 2), 50);
+      fetchNearby(region.latitude, region.longitude, calculatedRadius);
     },
     [fetchNearby],
   );
@@ -395,6 +376,24 @@ export default function DiscoverScreen() {
     );
   };
 
+  const handleUserLocationChange = useCallback(
+    (event: any) => {
+      if (!hasCenteredOnUser && event.nativeEvent.coordinate) {
+        const { latitude, longitude } = event.nativeEvent.coordinate;
+        setHasCenteredOnUser(true);
+        const newRegion = {
+          ...currentRegion,
+          latitude,
+          longitude,
+        };
+        setCurrentRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 1000);
+        fetchNearby(latitude, longitude);
+      }
+    },
+    [hasCenteredOnUser, currentRegion, fetchNearby],
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ClusteredMapView
@@ -404,7 +403,11 @@ export default function DiscoverScreen() {
         initialRegion={currentRegion}
         onRegionChangeComplete={handleRegionChangeComplete}
         onPress={() => setFocusedPoi(null)}
-        renderCluster={renderCluster}>
+        renderCluster={renderCluster}
+        showsUserLocation={true}
+        showsCompass={false}
+        showsMyLocationButton={false}
+        onUserLocationChange={handleUserLocationChange}>
         {focusedPoi && (
           <Marker
             coordinate={{
@@ -437,24 +440,19 @@ export default function DiscoverScreen() {
             <View style={styles.drawerHandle} />
           </Animated.View>
         </PanGestureHandler>
-        <PanGestureHandler
-          ref={contentPanRef}
-          simultaneousHandlers={listRef}
-          onGestureEvent={contentGestureHandler}>
-          <Animated.View style={{ flex: 1 }}>
-            <PoiListView
-              ref={listRef}
-              scrollHandler={scrollHandler}
-              searchQuery={searchQuery}
-              searchResults={orderedSearchResults}
-              nearbyPois={orderedNearbyPois}
-              loading={loading}
-              onPoiSelect={handlePoiSelect}
-              onZoom={handleZoomToPoi}
-              highlightedPoiId={focusedPoi?.place_id}
-            />
-          </Animated.View>
-        </PanGestureHandler>
+        <Animated.View style={{ flex: 1 }}>
+          <PoiListView
+            ref={listRef}
+            scrollHandler={scrollHandler}
+            searchQuery={searchQuery}
+            searchResults={orderedSearchResults}
+            nearbyPois={orderedNearbyPois}
+            loading={loading}
+            onPoiSelect={handlePoiSelect}
+            onZoom={handleZoomToPoi}
+            highlightedPoiId={focusedPoi?.place_id}
+          />
+        </Animated.View>
       </Animated.View>
       {selectedPoi && (
         <PoiDetailView

@@ -79,26 +79,25 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
             animatedStyle,
           ]}
         />
-        {state.routes.map(
-          (route: { key: React.Key | null | undefined; name: string }, index: any) => {
-            const { options } = descriptors[route.key];
-            const isFocused = state.index === index;
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
-            const onLongPress = () => {
-              navigation.emit({
-                type: 'tabLongPress',
-                target: route.key,
-              });
-            };
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const isFocused = state.index === index;
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+          const onLongPress = () => {
+            navigation.emit({
+              type: 'tabLongPress',
+              target: route.key,
+            });
+          };
             let iconName = '';
             if (route.name === 'Discover') {
               iconName = 'globe';
