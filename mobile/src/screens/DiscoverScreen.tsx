@@ -40,12 +40,13 @@ import Animated, {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
-  const { colors } = useTheme();
-  const mapRef = useRef<any>(null);
-  const listRef = useRef<any>(null);
-  const contentPanRef = useRef<any>(null);
-  const filterBarRef = useRef<FilterBarRef>(null);
-  const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+    const { colors } = useTheme();
+    const mapRef = useRef<any>(null);
+    const listRef = useRef<any>(null);
+    const filterBarRef = useRef<FilterBarRef>(null);
+
+    const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
@@ -159,56 +160,6 @@ export default function DiscoverScreen() {
         nextY = SNAP_TOP - 50;
       }
       drawerTranslateY.value = nextY;
-    },
-    onEnd: event => {
-      const velocity = event.velocityY;
-      const currentY = drawerTranslateY.value;
-      let target = SNAP_MEDIUM;
-      const points = [SNAP_TOP, SNAP_MEDIUM, SNAP_SMALL, SNAP_BOTTOM];
-      if (velocity < -500) {
-        if (currentY > SNAP_SMALL) {
-          target = SNAP_SMALL;
-        } else if (currentY > SNAP_MEDIUM) {
-          target = SNAP_MEDIUM;
-        } else {
-          target = SNAP_TOP;
-        }
-      } else if (velocity > 500) {
-        if (currentY < SNAP_MEDIUM) {
-          target = SNAP_MEDIUM;
-        } else if (currentY < SNAP_SMALL) {
-          target = SNAP_SMALL;
-        } else {
-          target = SNAP_BOTTOM;
-        }
-      } else {
-        target = points.reduce((prev, curr) =>
-          Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev,
-        );
-      }
-      drawerTranslateY.value = withSpring(target, { damping: 15, stiffness: 90 });
-    },
-  });
-
-  const contentGestureHandler = useAnimatedGestureHandler({
-    onStart: (_, ctx: any) => {
-      ctx.startY = drawerTranslateY.value;
-    },
-    onActive: (event, ctx) => {
-      const isAtTop = drawerTranslateY.value <= SNAP_TOP + 1;
-      if (isAtTop && scrollY.value > 0) {
-        return;
-      }
-      if (isAtTop && event.translationY < 0) {
-        return;
-      }
-      if ((isAtTop && event.translationY > 0 && scrollY.value <= 0) || !isAtTop) {
-        let nextY = ctx.startY + event.translationY;
-        if (nextY < SNAP_TOP - 50) {
-          nextY = SNAP_TOP - 50;
-        }
-        drawerTranslateY.value = nextY;
-      }
     },
     onEnd: event => {
       const velocity = event.velocityY;
@@ -489,24 +440,19 @@ export default function DiscoverScreen() {
             <View style={styles.drawerHandle} />
           </Animated.View>
         </PanGestureHandler>
-        <PanGestureHandler
-          ref={contentPanRef}
-          simultaneousHandlers={listRef}
-          onGestureEvent={contentGestureHandler}>
-          <Animated.View style={{ flex: 1 }}>
-            <PoiListView
-              ref={listRef}
-              scrollHandler={scrollHandler}
-              searchQuery={searchQuery}
-              searchResults={orderedSearchResults}
-              nearbyPois={orderedNearbyPois}
-              loading={loading}
-              onPoiSelect={handlePoiSelect}
-              onZoom={handleZoomToPoi}
-              highlightedPoiId={focusedPoi?.place_id}
-            />
-          </Animated.View>
-        </PanGestureHandler>
+        <Animated.View style={{ flex: 1 }}>
+          <PoiListView
+            ref={listRef}
+            scrollHandler={scrollHandler}
+            searchQuery={searchQuery}
+            searchResults={orderedSearchResults}
+            nearbyPois={orderedNearbyPois}
+            loading={loading}
+            onPoiSelect={handlePoiSelect}
+            onZoom={handleZoomToPoi}
+            highlightedPoiId={focusedPoi?.place_id}
+          />
+        </Animated.View>
       </Animated.View>
       {selectedPoi && (
         <PoiDetailView
