@@ -30,7 +30,7 @@ export class AuthService {
       password: hashedPassword,
       name,
     });
-    const { password, ...result } = user;
+    const { password: _password, ...result } = user;
     return result;
   }
 

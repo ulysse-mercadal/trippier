@@ -54,6 +54,19 @@ npx eslint . --fix    # Auto-fix errors
 
 ---
 
+## 🔑 Environment Variables
+
+This project uses a unified environment variable system for API keys. 
+
+- **GOOGLE_MAPS_API_KEY**: This key is used across the Backend (for Places API), the Frontend (for Maps JavaScript API), and the Mobile app (for Native Maps SDKs).
+
+When adding new environment variables:
+1.  Update `.env.example` at the root.
+2.  If the variable is needed in the Frontend browser, update `frontend/next.config.ts`.
+3.  If the variable is needed in the Mobile app, update `mobile/env.d.ts` and the respective native configurations (`AndroidManifest.xml` / `AppDelegate.mm`).
+
+---
+
 ## 🛠 Development Workflow
 
 ### Feature Branches

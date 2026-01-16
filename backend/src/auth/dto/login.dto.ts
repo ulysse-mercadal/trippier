@@ -1,13 +1,13 @@
 // **************************************************************************
 //
-//  Trippier Project - Mobile App
+//  Trippier Project - API
 //
 //  By: Ulysse Mercadal
 //  Email: ulyssemercadal@kakao.com
 //
 // **************************************************************************
 
-declare module '@env' {
-  export const API_URL: string;
-  export const GOOGLE_MAPS_API_KEY: string;
+export class LoginDto {
+  email: string;
+  password: string;
 }

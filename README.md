@@ -14,7 +14,24 @@ Trippier is a complete travel planning ecosystem featuring a webapp, a mobile ap
 
 ## 🚀 Quick Start
 
-### 1. Launch the Stack (DB + API + Web)
+### 1. Configuration
+
+Copy the `.env.example` file to `.env` and fill in the values:
+
+```bash
+cp .env.example .env
+```
+
+You will need a **Google Maps API Key** with the following APIs enabled:
+- Maps SDK for Android
+- Maps SDK for iOS
+- Maps JavaScript API
+- Places API
+
+Add your key to the `.env` file:
+`GOOGLE_MAPS_API_KEY=your_key_here`
+
+### 2. Launch the Stack (DB + API + Web)
 
 ```bash
 make up

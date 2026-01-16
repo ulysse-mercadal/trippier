@@ -12,6 +12,7 @@ module.exports = {
   extends: '@react-native',
   plugins: ['header'],
   rules: {
+    curly: ['error', 'all'],
     'header/header': [
       'error',
       'line',

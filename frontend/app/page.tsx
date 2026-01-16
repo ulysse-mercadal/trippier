@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { IoArrowBack } from 'react-icons/io5';
+import axios from 'axios';
 
 type ViewMode = 'entry' | 'login' | 'register';
 
@@ -44,9 +45,9 @@ export default function LoginPage() {
       } else {
         await register(email, password, name);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      if (err.response?.data?.message) {
+      if (axios.isAxiosError(err) && err.response?.data?.message) {
         setError(
           Array.isArray(err.response.data.message)
             ? err.response.data.message[0]

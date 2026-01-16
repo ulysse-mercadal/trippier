@@ -18,8 +18,6 @@ jest.mock('bcrypt');
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: UsersService;
-  let jwtService: JwtService;
 
   const mockUsersService = {
     findOneByEmail: jest.fn(),
@@ -46,8 +44,6 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
-    jwtService = module.get<JwtService>(JwtService);
   });
 
   it('should be defined', () => {
@@ -57,7 +53,9 @@ describe('AuthService', () => {
   describe('register', () => {
     it('should throw ConflictException if user already exists', async () => {
       mockUsersService.findOneByEmail.mockResolvedValue({ id: 1, email: 'test@example.com' });
-      await expect(service.register('test@example.com', 'password')).rejects.toThrow(ConflictException);
+      await expect(service.register('test@example.com', 'password')).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should create a new user and return user without password', async () => {
@@ -80,13 +78,21 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should throw UnauthorizedException if user not found', async () => {
       mockUsersService.findOneByEmail.mockResolvedValue(null);
-      await expect(service.login('test@example.com', 'password')).rejects.toThrow(UnauthorizedException);
+      await expect(service.login('test@example.com', 'password')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should throw UnauthorizedException if password does not match', async () => {
-      mockUsersService.findOneByEmail.mockResolvedValue({ id: 1, email: 'test@example.com', password: 'hashedPassword' });
+      mockUsersService.findOneByEmail.mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        password: 'hashedPassword',
+      });
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
-      await expect(service.login('test@example.com', 'password')).rejects.toThrow(UnauthorizedException);
+      await expect(service.login('test@example.com', 'password')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('should return access token and user info on success', async () => {

@@ -4,7 +4,6 @@ import nextTs from 'eslint-config-next/typescript';
 import header from 'eslint-plugin-header';
 import prettier from 'eslint-plugin-prettier/recommended';
 
-// Workaround for eslint-plugin-header not having a schema, which is required by ESLint 9
 header.rules.header.meta = {
   ...header.rules.header.meta,
   schema: [
@@ -48,29 +47,25 @@ const eslintConfig = defineConfig([
       header,
     },
     rules: {
+      curly: ['error', 'all'],
       'header/header': [
         'error',
         'line',
         [
-                    "  Trippier Project - Web App",
-                    "",
-                    "  By: Ulysse Mercadal",
-                    "  Email: ulyssemercadal@kakao.com",
-                    "",
-                    " **************************************************************************",        ],
+          ' **************************************************************************',
+          '',
+          '  Trippier Project - Web App',
+          '',
+          '  By: Ulysse Mercadal',
+          '  Email: ulyssemercadal@kakao.com',
+          '',
+          ' **************************************************************************',
+        ],
         2,
       ],
     },
   },
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    '.next/**',
-    'out/**',
-    'build/**',
-    'next-env.d.ts',
-    'eslint.config.mjs',
-  ]),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'eslint.config.mjs']),
 ]);
 
 export default eslintConfig;
