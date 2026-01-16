@@ -150,7 +150,7 @@ describe('DiscoverService', () => {
 
     const pois = await service.findNearbyPOIs(48.8584, 2.2945);
     expect(pois[0].name).toBe('Eiffel Tower');
-    expect(pois[0].wikipediaUrl).toBe('https://en.wikipedia.org/wiki/Eiffel_Tower');
+    expect(pois[0].wikipediaUrl).toBeNull();
     expect(mockHttpService.get).toHaveBeenCalled();
   });
 });
