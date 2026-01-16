@@ -75,11 +75,11 @@ export default function DiscoverScreen() {
     [drawerTranslateY],
   );
 
-  const fetchNearby = useCallback(async (lat: number, lng: number) => {
+  const fetchNearby = useCallback(async (lat: number, lng: number, radius?: number) => {
     try {
       setLoading(true);
       const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 5 },
+        params: { lat, lng, radius: radius || 5 },
       });
       setNearbyPois(response.data);
     } catch (error) {
@@ -284,7 +284,8 @@ export default function DiscoverScreen() {
   const handleRegionChangeComplete = useCallback(
     (region: Region) => {
       setCurrentRegion(region);
-      fetchNearby(region.latitude, region.longitude);
+      const calculatedRadius = Math.min(Math.max(region.latitudeDelta * 111, 2), 50);
+      fetchNearby(region.latitude, region.longitude, calculatedRadius);
     },
     [fetchNearby],
   );
