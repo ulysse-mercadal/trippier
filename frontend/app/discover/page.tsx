@@ -46,12 +46,15 @@ export default function DiscoverPage() {
 
   const fetchNearby = useCallback(async (lat: number, lng: number) => {
     try {
+      setLoading(true);
       const response = await client.get('/discover/nearby', {
         params: { lat, lng, radius: 5 },
       });
       setNearbyPois(response.data);
     } catch (error) {
       console.error('Failed to fetch nearby POIs:', error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -73,24 +76,64 @@ export default function DiscoverPage() {
     }
   }, []);
 
-  const handleSearch = (text: string) => {
-    setSearchQuery(text);
-    fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text);
-  };
+  const handleSearch = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text);
+    },
+    [fetchSearch],
+  );
 
-  const handleMapMove = (lat: number, lng: number) => {
-    lastCoords.current = { lat, lng };
-    if (!selectedPoi) {
+  const handleMapMove = useCallback(
+    (lat: number, lng: number) => {
+      lastCoords.current = { lat, lng };
       fetchNearby(lat, lng);
       if (searchQuery) {
         fetchSearch(lat, lng, searchQuery);
       }
-    }
-  };
+    },
+    [fetchNearby, fetchSearch, searchQuery],
+  );
 
-  const handlePoiSelect = (poi: POI | null) => {
-    setSelectedPoi(poi);
-  };
+  const handlePoiSelect = useCallback(
+    async (poi: POI | null) => {
+      setSelectedPoi(poi);
+      if (poi) {
+        const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
+        const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
+        lastCoords.current = { lat, lng };
+
+        try {
+          setLoading(true);
+          const response = await client.get('/discover/details', {
+            params: {
+              place_id: poi.place_id,
+              name: poi.name,
+              lat,
+              lng,
+            },
+          });
+          setSelectedPoi(prev =>
+            prev
+              ? {
+                  ...prev,
+                  description: response.data.description,
+                  wikipediaUrl: response.data.wikipediaUrl,
+                  wikivoyageUrl: response.data.wikivoyageUrl,
+                  officialWebsite: response.data.website,
+                  phoneNumber: response.data.phoneNumber,
+                }
+              : null,
+          );
+        } catch (error) {
+          console.error('Failed to fetch POI details:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    },
+    [client],
+  );
 
   return (
     <div className="relative w-full h-full bg-white overflow-hidden">

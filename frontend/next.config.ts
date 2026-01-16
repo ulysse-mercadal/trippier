@@ -18,7 +18,10 @@ if (fs.existsSync(envPath)) {
   envFile.split('\n').forEach(line => {
     const [key, ...valueParts] = line.split('=');
     if (key && valueParts.length > 0 && !key.startsWith('#')) {
-      const value = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
+      const value = valueParts
+        .join('=')
+        .trim()
+        .replace(/^["']|["']$/g, '');
       process.env[key.trim()] = value;
     }
   });

@@ -23,4 +23,14 @@ export class DiscoverController {
   ) {
     return this.discoverService.findNearbyPOIs(lat, lng, radius, q);
   }
+
+  @Get('details')
+  async getDetails(
+    @Query('place_id') place_id: string,
+    @Query('name') name: string,
+    @Query('lat', ParseFloatPipe) lat: number,
+    @Query('lng', ParseFloatPipe) lng: number,
+  ) {
+    return this.discoverService.getPOIDetails(place_id, name, lat, lng);
+  }
 }

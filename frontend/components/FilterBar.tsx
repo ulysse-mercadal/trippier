@@ -81,6 +81,9 @@ export default function FilterBar({
   const collapseSearch = () => {
     onToggle(false);
     setInputValue('');
+    if (onSearch) {
+      onSearch('');
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -189,7 +192,20 @@ export default function FilterBar({
                 </div>
                 <div className="flex-1 overflow-y-auto px-6 pb-24 scrollbar-hide">
                   <div className="grid gap-3">
-                    {nearbyPois.map((poi, i) => renderPoiCard(poi, i))}
+                    {nearbyPois.length > 0 ? (
+                      nearbyPois.map((poi, i) => renderPoiCard(poi, i))
+                    ) : loading ? (
+                      <div className="flex flex-col gap-3">
+                        {[1, 2, 3].map(i => (
+                          <div
+                            key={i}
+                            className="p-4 bg-gray-50 rounded-2xl animate-pulse h-20 w-full"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No places found nearby.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -205,7 +221,15 @@ export default function FilterBar({
               className="flex-1 flex flex-col overflow-y-auto p-6 scrollbar-hide pb-24">
               <div className="flex items-center mb-6">
                 <button
-                  onClick={() => onPoiSelect && onPoiSelect(null)}
+                  onClick={() => {
+                    if (onPoiSelect) {
+                      onPoiSelect(null);
+                    }
+                    setInputValue('');
+                    if (onSearch) {
+                      onSearch('');
+                    }
+                  }}
                   className="flex items-center text-gray-900 font-black text-lg transition-colors hover:text-gray-600">
                   <IoArrowBack size={24} className="mr-2" /> Back
                 </button>
@@ -242,7 +266,7 @@ export default function FilterBar({
                 </div>
               </div>
               <div className="space-y-8">
-                {selectedPoi.description && (
+                {selectedPoi.description ? (
                   <section>
                     <div className="flex items-center text-gray-400 mb-3">
                       <IoInformationCircleOutline size={20} className="mr-2" />
@@ -252,6 +276,13 @@ export default function FilterBar({
                       &quot;{selectedPoi.description}&quot;
                     </p>
                   </section>
+                ) : (
+                  loading && (
+                    <section className="animate-pulse">
+                      <div className="h-4 w-20 bg-gray-100 rounded mb-3" />
+                      <div className="h-20 bg-gray-50 rounded-2xl" />
+                    </section>
+                  )
                 )}
                 <section>
                   <div className="flex items-center text-gray-400 mb-3">
@@ -270,7 +301,7 @@ export default function FilterBar({
                       <span className="font-bold text-sm">Open in Google Maps</span>
                       <IoMapOutline size={18} />
                     </button>
-                    {(selectedPoi.officialWebsite || selectedPoi.phoneNumber) && (
+                    {selectedPoi.officialWebsite || selectedPoi.phoneNumber ? (
                       <div className="flex gap-2">
                         {selectedPoi.officialWebsite && (
                           <button
@@ -307,8 +338,10 @@ export default function FilterBar({
                           </button>
                         )}
                       </div>
+                    ) : (
+                      loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
                     )}
-                    {selectedPoi.wikipediaUrl && (
+                    {selectedPoi.wikipediaUrl ? (
                       <button
                         onClick={() =>
                           selectedPoi.wikipediaUrl && openUrl(selectedPoi.wikipediaUrl)
@@ -317,8 +350,10 @@ export default function FilterBar({
                         <span className="font-bold text-sm">Wikipedia</span>
                         <IoReaderOutline size={18} />
                       </button>
+                    ) : (
+                      loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
                     )}
-                    {selectedPoi.wikivoyageUrl && (
+                    {selectedPoi.wikivoyageUrl ? (
                       <button
                         onClick={() =>
                           selectedPoi.wikivoyageUrl && openUrl(selectedPoi.wikivoyageUrl)
@@ -327,6 +362,8 @@ export default function FilterBar({
                         <span className="font-bold text-sm">Travel Guide</span>
                         <IoGlobeOutline size={18} />
                       </button>
+                    ) : (
+                      loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
                     )}
                   </div>
                 </section>
@@ -384,7 +421,31 @@ export default function FilterBar({
                   </motion.button>
                 )}
               </AnimatePresence>
-              <IoSearch size={18} className="text-gray-800 mr-2" />
+              <div className="relative mr-2 flex items-center justify-center w-5 h-5">
+                <AnimatePresence mode="wait">
+                  {loading ? (
+                    <motion.div
+                      key="loader"
+                      initial={{ opacity: 0, rotate: 0 }}
+                      animate={{ opacity: 1, rotate: 360 }}
+                      exit={{ opacity: 0 }}
+                      transition={{
+                        rotate: { duration: 1, repeat: Infinity, ease: 'linear' },
+                        opacity: { duration: 0.2 },
+                      }}
+                      className="absolute w-4 h-4 border-2 border-gray-200 border-t-black rounded-full"
+                    />
+                  ) : (
+                    <motion.div
+                      key="search-icon"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}>
+                      <IoSearch size={18} className="text-gray-800" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <input
                 ref={inputRef}
                 type="text"

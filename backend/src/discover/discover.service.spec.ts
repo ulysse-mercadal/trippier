@@ -70,9 +70,7 @@ describe('DiscoverService', () => {
     const wikiGeoResponse = {
       data: {
         query: {
-          geosearch: [
-            { title: 'Eiffel Tower', pageid: 1, dist: 10 }
-          ],
+          geosearch: [{ title: 'Eiffel Tower', pageid: 1, dist: 10 }],
         },
       },
       status: 200,
@@ -100,7 +98,12 @@ describe('DiscoverService', () => {
     } as AxiosResponse;
 
     const openSearchResponse = {
-      data: ['Eiffel Tower', ['Eiffel Tower'], [''], ['https://en.wikipedia.org/wiki/Eiffel_Tower']],
+      data: [
+        'Eiffel Tower',
+        ['Eiffel Tower'],
+        [''],
+        ['https://en.wikipedia.org/wiki/Eiffel_Tower'],
+      ],
       status: 200,
       statusText: 'OK',
       headers: {},
@@ -114,27 +117,34 @@ describe('DiscoverService', () => {
       headers: {},
       config: { headers: {} as any },
     } as AxiosResponse;
-
-    mockHttpService.get.mockImplementation((url, config) => {
+    mockHttpService.get.mockImplementation((url: string, config?: any) => {
       const params = config?.params || {};
-      
+
       if (url.includes('maps.googleapis.com/maps/api/place/nearbysearch')) {
         return of(googleResponse);
       }
+
       if (url.includes('wikipedia.org/w/api.php') || url.includes('wikivoyage.org/w/api.php')) {
         if (params.action === 'opensearch') {
           return of(openSearchResponse);
         }
+
         if (params.list === 'geosearch') {
           return of(wikiGeoResponse);
         }
-        if (params.action === 'query' && (params.prop?.includes('extracts') || params.prop?.includes('info'))) {
+
+        if (
+          params.action === 'query' &&
+          (String(params.prop).includes('extracts') || String(params.prop).includes('info'))
+        ) {
           return of(wikiDetailsResponse);
         }
       }
+
       if (url.includes('maps.googleapis.com/maps/api/place/details')) {
         return of(detailsResponse);
       }
+
       return of({ data: {} });
     });
 

@@ -17,7 +17,7 @@ interface WikiResult {
   summary: string;
 }
 
-interface EnrichedWikiData {
+export interface EnrichedWikiData {
   description: string | null;
   wikipediaUrl: string | null;
   wikivoyageUrl: string | null;
@@ -110,51 +110,47 @@ export class DiscoverService {
       const results = response.data.results || [];
       results.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
 
-      const processedResults: ProcessedPOI[] = [];
-      const itemsToProcess = results.slice(0, 15);
-
-      for (const item of itemsToProcess) {
-        const cacheKey = item.place_id;
-
-        if (!this.wikiCache.has(cacheKey)) {
-          const itemLat = item.geometry.location.lat;
-          const itemLng = item.geometry.location.lng;
-
-          const [wikiEN, voyEN, googleDetails] = await Promise.all([
-            this.fetchWikipedia('en.wikipedia.org', item.name, itemLat, itemLng),
-            this.fetchWikivoyage('en.wikivoyage.org', itemLat, itemLng),
-            this.fetchPlaceDetails(item.place_id),
-          ]);
-
-          const enriched: EnrichedWikiData = {
-            description: voyEN?.summary || wikiEN?.summary || null,
-            wikipediaUrl: wikiEN?.url || null,
-            wikivoyageUrl: voyEN?.url || null,
-            website: googleDetails?.website || null,
-            phoneNumber:
-              googleDetails?.formatted_phone_number ||
-              googleDetails?.international_phone_number ||
-              null,
-          };
-          this.wikiCache.set(cacheKey, enriched);
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-
-        const extra = this.wikiCache.get(cacheKey) as EnrichedWikiData;
-        processedResults.push({
-          ...this.mapBasicInfo(item, lat, lng),
-          wikipediaUrl: extra.wikipediaUrl,
-          wikivoyageUrl: extra.wikivoyageUrl,
-          officialWebsite: extra.website || null,
-          phoneNumber: extra.phoneNumber || null,
-          description: extra.description,
-        });
-      }
-
-      return processedResults;
+      return results.slice(0, 20).map(item => ({
+        ...this.mapBasicInfo(item, lat, lng),
+        wikipediaUrl: null,
+        wikivoyageUrl: null,
+        officialWebsite: null,
+        phoneNumber: null,
+        description: null,
+      }));
     } catch (_error) {
       throw new HttpException('Failed to fetch data', HttpStatus.BAD_GATEWAY);
     }
+  }
+
+  async getPOIDetails(
+    place_id: string,
+    name: string,
+    lat: number,
+    lng: number,
+  ): Promise<EnrichedWikiData> {
+    const cacheKey = place_id;
+    if (this.wikiCache.has(cacheKey)) {
+      return this.wikiCache.get(cacheKey)!;
+    }
+
+    const [wikiEN, voyEN, googleDetails] = await Promise.all([
+      this.fetchWikipedia('en.wikipedia.org', name, lat, lng),
+      this.fetchWikivoyage('en.wikivoyage.org', lat, lng),
+      this.fetchPlaceDetails(place_id),
+    ]);
+
+    const enriched: EnrichedWikiData = {
+      description: voyEN?.summary || wikiEN?.summary || null,
+      wikipediaUrl: wikiEN?.url || null,
+      wikivoyageUrl: voyEN?.url || null,
+      website: googleDetails?.website || null,
+      phoneNumber:
+        googleDetails?.formatted_phone_number || googleDetails?.international_phone_number || null,
+    };
+
+    this.wikiCache.set(cacheKey, enriched);
+    return enriched;
   }
 
   private mapBasicInfo(item: GooglePlace, userLat: number, userLng: number) {

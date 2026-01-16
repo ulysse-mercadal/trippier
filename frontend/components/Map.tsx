@@ -109,10 +109,14 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
         map.setOptions({ gestureHandling: 'greedy' });
         setTimeout(() => {
           isAnimating.current = false;
+          const center = map.getCenter();
+          if (center && onCenterChanged) {
+            onCenterChanged(center.lat(), center.lng());
+          }
         }, 500);
       });
     }, 400);
-  }, [targetLocation]);
+  }, [targetLocation, onCenterChanged]);
 
   const handleIdle = useCallback(() => {
     if (mapRef.current && onCenterChanged && !isAnimating.current) {
