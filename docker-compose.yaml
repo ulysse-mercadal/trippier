@@ -18,9 +18,9 @@ services:
     restart: always
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      PORT: ${PORT}
+      PORT: 3000
     ports:
-      - "3001:3000"
+      - "${BACKEND_PORT}:3000"
     volumes:
       - ./backend:/app:z
       - /app/node_modules
@@ -36,10 +36,10 @@ services:
       target: builder
     restart: always
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+      API_URL: ${API_URL}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT}:3000"
     volumes:
       - ./frontend:/app:z
       - /app/node_modules

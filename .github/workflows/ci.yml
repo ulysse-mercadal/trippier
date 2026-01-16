@@ -1,0 +1,100 @@
+name: CI - Test & Build
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: ./backend
+        run: npx prisma generate
+
+      - name: Run Tests
+        working-directory: ./backend
+        run: npm run test
+
+      - name: Build
+        working-directory: ./backend
+        run: npm run build
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          API_URL: http://localhost:3001
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./mobile
+        run: npm ci
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create .env file
+        working-directory: ./mobile
+        run: |
+          echo "API_URL=${{ secrets.API_URL }}" >> .env
+          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+
+      - name: Build Android
+        working-directory: ./mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
