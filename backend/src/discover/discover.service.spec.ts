@@ -7,12 +7,14 @@
 //
 // **************************************************************************
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { DiscoverService } from './discover.service';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { of } from 'rxjs';
-import { AxiosResponse } from 'axios';
+import { AxiosResponse, AxiosRequestConfig } from 'axios';
 
 describe('DiscoverService', () => {
   let service: DiscoverService;
@@ -117,8 +119,8 @@ describe('DiscoverService', () => {
       headers: {},
       config: { headers: {} as any },
     } as AxiosResponse;
-    mockHttpService.get.mockImplementation((url: string, config?: any) => {
-      const params = config?.params || {};
+    mockHttpService.get.mockImplementation((url: string, config?: AxiosRequestConfig) => {
+      const params: Record<string, any> = config?.params || {};
 
       if (url.includes('maps.googleapis.com/maps/api/place/nearbysearch')) {
         return of(googleResponse);
