@@ -38,9 +38,27 @@ interface GooglePlace {
   };
   vicinity?: string;
   formatted_address?: string;
-  photos?: Array<{ 
+  photos?: Array<{
     photo_reference: string;
   }>;
+}
+
+export interface ProcessedPOI {
+  place_id: string;
+  name: string;
+  type: string;
+  rating?: number;
+  user_ratings_total?: number;
+  distance: number;
+  lat: number;
+  lng: number;
+  address?: string;
+  thumbnail: string | null;
+  wikipediaUrl: string | null;
+  wikivoyageUrl: string | null;
+  officialWebsite: string | null;
+  phoneNumber: string | null;
+  description: string | null;
 }
 
 @Injectable()
@@ -55,7 +73,7 @@ export class DiscoverService {
     this.googleApiKey = this.configService.get<string>('GOOGLE_MAPS_API_KEY');
   }
 
-  async findNearbyPOIs(lat: number, lng: number, radius = 5, q?: string) {
+  async findNearbyPOIs(lat: number, lng: number, radius = 5, q?: string): Promise<ProcessedPOI[]> {
     if (!this.googleApiKey) {
       throw new HttpException(
         'Google Maps API Key not configured',
@@ -92,7 +110,7 @@ export class DiscoverService {
       const results = response.data.results || [];
       results.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
 
-      const processedResults: any[] = [];
+      const processedResults: ProcessedPOI[] = [];
       const itemsToProcess = results.slice(0, 15);
 
       for (const item of itemsToProcess) {
@@ -127,8 +145,8 @@ export class DiscoverService {
           ...this.mapBasicInfo(item, lat, lng),
           wikipediaUrl: extra.wikipediaUrl,
           wikivoyageUrl: extra.wikivoyageUrl,
-          officialWebsite: extra.website,
-          phoneNumber: extra.phoneNumber,
+          officialWebsite: extra.website || null,
+          phoneNumber: extra.phoneNumber || null,
           description: extra.description,
         });
       }
@@ -162,7 +180,7 @@ export class DiscoverService {
   private async fetchPlaceDetails(placeId: string) {
     try {
       const response = await firstValueFrom(
-        this.httpService.get<{ 
+        this.httpService.get<{
           result: {
             website?: string;
             formatted_phone_number?: string;
@@ -194,21 +212,20 @@ export class DiscoverService {
 
       // Pass 1: Geographic search (1km)
       const geoResponse = await firstValueFrom(
-        this.httpService.get<{ query?: { geosearch: Array<{ title: string; pageid: number; dist: number }> } }>(
-          apiUrl,
-          {
-            headers,
-            params: {
-              action: 'query',
-              list: 'geosearch',
-              gscoord: `${lat}|${lng}`,
-              gsradius: 1000,
-              gslimit: 10,
-              format: 'json',
-              origin: '*',
-            },
+        this.httpService.get<{
+          query?: { geosearch: Array<{ title: string; pageid: number; dist: number }> };
+        }>(apiUrl, {
+          headers,
+          params: {
+            action: 'query',
+            list: 'geosearch',
+            gscoord: `${lat}|${lng}`,
+            gsradius: 1000,
+            gslimit: 10,
+            format: 'json',
+            origin: '*',
           },
-        ),
+        }),
       );
 
       // Pass 2: Title search (opensearch)
@@ -248,7 +265,10 @@ export class DiscoverService {
         const resTitleLower = resTitle.toLowerCase();
         if (resTitleLower === normalizedTitle) {
           score += 150;
-        } else if (resTitleLower.includes(normalizedTitle) || normalizedTitle.includes(resTitleLower)) {
+        } else if (
+          resTitleLower.includes(normalizedTitle) ||
+          normalizedTitle.includes(resTitleLower)
+        ) {
           score += 70;
         }
 
@@ -274,7 +294,7 @@ export class DiscoverService {
       if (bestTitle && maxScore > 30) {
         const bestData = scores.get(bestTitle)!;
         const detailsResponse = await firstValueFrom(
-          this.httpService.get<{ 
+          this.httpService.get<{
             query: { pages: Record<string, { fullurl: string; extract?: string }> };
           }>(apiUrl, {
             headers,
@@ -339,7 +359,7 @@ export class DiscoverService {
 
       if (page) {
         const detailsResponse = await firstValueFrom(
-          this.httpService.get<{ 
+          this.httpService.get<{
             query: { pages: Record<string, { fullurl: string; extract?: string }> };
           }>(apiUrl, {
             headers,
