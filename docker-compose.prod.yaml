@@ -6,34 +6,27 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    expose:
+      - 5432
 
   backend:
     build:
       context: ./backend
-      target: builder
     restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       PORT: 3000
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     ports:
-      - "${BACKEND_PORT}:3000"
-    volumes:
-      - ./backend:/app:z
-      - /app/node_modules
-    command: sh -c "npx prisma migrate dev && npm run start:dev"
+      - "${BACKEND_PORT:-3000}:3000"
     depends_on:
       - db
-    env_file:
-      - .env
 
   frontend:
     build:
       context: ./frontend
-      target: builder
       args:
         API_URL: ${API_URL}
         GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
@@ -42,16 +35,9 @@ services:
       API_URL: ${API_URL}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     ports:
-      - "${FRONTEND_PORT}:3000"
-    volumes:
-      - ./frontend:/app:z
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev
+      - "80:3000"
     depends_on:
       - backend
-    env_file:
-      - .env
 
 volumes:
   postgres_data:
