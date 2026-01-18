@@ -11,6 +11,9 @@ module.exports = {
   root: true,
   extends: '@react-native',
   plugins: ['header'],
+  env: {
+    jest: true,
+  },
   rules: {
     curly: ['error', 'all'],
     'header/header': [
@@ -35,4 +38,12 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
   },
+  overrides: [
+    {
+      files: ['jest.setup.js'],
+      rules: {
+        'no-unused-vars': 'off',
+      },
+    },
+  ],
 };

@@ -7,6 +7,14 @@ RUN npm ci
 
 COPY . .
 
+# On déclare les arguments nécessaires au build
+ARG API_URL
+ARG GOOGLE_MAPS_API_KEY
+
+# On les rend disponibles comme variables d'environnement pendant le build
+ENV API_URL=$API_URL
+ENV GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
+
 RUN npm run build
 
 FROM node:20-alpine

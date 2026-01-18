@@ -56,22 +56,6 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
     mapRef.current = null;
   }, []);
 
-  const calculateDistance = (
-    p1: { lat: number; lng: number },
-    p2: { lat: number; lng: number },
-  ) => {
-    const R = 6371;
-    const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-    const dLon = ((p2.lng - p1.lng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((p1.lat * Math.PI) / 180) *
-        Math.cos((p2.lat * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  };
-
   useEffect(() => {
     if (!mapRef.current || !targetLocation) {
       lastAnimatedCoords.current = null;
@@ -84,38 +68,13 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
       return;
     }
     const map = mapRef.current;
-    const currentCenter = map.getCenter()?.toJSON();
-    if (!currentCenter) {
-      return;
-    }
-    isAnimating.current = true;
     lastAnimatedCoords.current = targetLocation;
-    const distance = calculateDistance(currentCenter, targetLocation);
-    let flyZoom = 12;
-    if (distance > 1000) {
-      flyZoom = 3;
-    } else if (distance > 100) {
-      flyZoom = 5;
-    } else if (distance > 10) {
-      flyZoom = 8;
+    map.setCenter(targetLocation);
+    map.setZoom(17);
+    const center = map.getCenter();
+    if (center && onCenterChanged) {
+      onCenterChanged(center.lat(), center.lng());
     }
-    map.setOptions({ gestureHandling: 'none' });
-    map.setZoom(flyZoom);
-    setTimeout(() => {
-      map.panTo(targetLocation);
-      const listener = google.maps.event.addListener(map, 'idle', () => {
-        map.setZoom(17);
-        google.maps.event.removeListener(listener);
-        map.setOptions({ gestureHandling: 'greedy' });
-        setTimeout(() => {
-          isAnimating.current = false;
-          const center = map.getCenter();
-          if (center && onCenterChanged) {
-            onCenterChanged(center.lat(), center.lng());
-          }
-        }, 500);
-      });
-    }, 400);
   }, [targetLocation, onCenterChanged]);
 
   const handleIdle = useCallback(() => {

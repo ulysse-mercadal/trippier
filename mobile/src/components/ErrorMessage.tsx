@@ -37,7 +37,6 @@ export default function ErrorMessage({ message, onHide }: ErrorMessageProps) {
   if (!message) {
     return null;
   }
-
   return (
     <Animated.View style={[styles.container, { opacity }]}>
       <Text style={styles.text}>{message}</Text>
