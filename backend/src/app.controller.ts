@@ -20,7 +20,10 @@ export class AppController {
   }
 
   @Get('download-apk')
-  @Redirect('https://github.com/ulysse-mercadal/trippier/releases/latest/download/trippier.apk', 302)
+  @Redirect(
+    'https://github.com/ulysse-mercadal/trippier/releases/latest/download/trippier.apk',
+    302,
+  )
   downloadApk() {
     return;
   }
