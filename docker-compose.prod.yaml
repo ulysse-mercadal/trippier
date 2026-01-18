@@ -18,10 +18,26 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       PORT: 3000
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     depends_on:
       - db
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_URL: ${API_URL}
+        GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+    restart: always
+    environment:
+      API_URL: ${API_URL}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+    ports:
+      - "80:3000"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
