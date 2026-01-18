@@ -91,6 +91,11 @@ export default function LoginPage() {
               className="w-full py-4 bg-white text-black font-bold rounded-xl text-lg hover:bg-gray-100 transition-colors">
               Create Account
             </button>
+            <a
+              href={`${process.env.API_URL || 'http://localhost:3001'}/download-apk`}
+              className="w-full py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl text-lg mt-4 hover:bg-white/10 transition-colors block">
+              Download App
+            </a>
           </motion.div>
         )}
       </AnimatePresence>
