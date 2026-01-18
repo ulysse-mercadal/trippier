@@ -39,7 +39,7 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease
-          mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/trippier.apk
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/trippier.apk
 
       - name: Create Release
         id: create_release
