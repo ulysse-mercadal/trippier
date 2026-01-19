@@ -40,12 +40,13 @@ import Animated, {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
-    const { colors } = useTheme();
-    const mapRef = useRef<any>(null);
-    const listRef = useRef<any>(null);
-    const filterBarRef = useRef<FilterBarRef>(null);
+  const { colors } = useTheme();
+  const mapRef = useRef<any>(null);
+  const listRef = useRef<any>(null);
+  const filterBarRef = useRef<FilterBarRef>(null);
+  const lastZoomTime = useRef(0);
 
-    const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
+  const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
 
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,6 +72,7 @@ export default function DiscoverScreen() {
 
   const snapTo = useCallback(
     (point: number) => {
+      console.log('snapTo called with:', point);
       drawerTranslateY.value = withSpring(point, { damping: 15 });
     },
     [drawerTranslateY],
@@ -203,7 +205,7 @@ export default function DiscoverScreen() {
           params: { lat, lng, radius: 50, q },
         });
         setSearchResults(response.data);
-        runOnJS(snapTo)(SNAP_MEDIUM);
+        snapTo(SNAP_MEDIUM);
       } catch (error) {
         console.error('Failed to fetch search results:', error);
       } finally {
@@ -261,13 +263,14 @@ export default function DiscoverScreen() {
 
   const handleZoomToPoi = useCallback(
     (poi: POI) => {
+      lastZoomTime.current = Date.now();
       const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
       const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
       setFocusedPoi(poi);
+      snapTo(SNAP_SMALL);
       if (listRef.current && listRef.current.scrollTo) {
         listRef.current.scrollTo({ y: 0, animated: true });
       }
-      runOnJS(snapTo)(SNAP_SMALL);
       mapRef.current?.animateToRegion(
         {
           latitude: lat,
@@ -283,6 +286,7 @@ export default function DiscoverScreen() {
 
   const handlePoiSelect = useCallback(
     async (poi: POI, layout?: LayoutInfo) => {
+      console.log('handlePoiSelect called for:', poi.name);
       setSelectedPoi(poi);
       setFocusedPoi(poi);
       setSelectedPoiLayout(layout);
@@ -416,7 +420,11 @@ export default function DiscoverScreen() {
               longitude:
                 typeof focusedPoi.lng === 'string' ? parseFloat(focusedPoi.lng) : focusedPoi.lng,
             }}
-            anchor={{ x: 0.5, y: 0.5 }}>
+            anchor={{ x: 0.5, y: 0.5 }}
+            onPress={e => {
+              e.stopPropagation();
+              handlePoiSelect(focusedPoi);
+            }}>
             <View style={styles.selectedMarker} />
           </Marker>
         )}

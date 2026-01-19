@@ -8,7 +8,7 @@
 // **************************************************************************
 
 import React, { useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { POI } from '../lib/types';
 
@@ -37,22 +37,29 @@ export default function PoiCard({ poi, onPress, onZoom, isHighlighted }: PoiCard
 
   return (
     <View ref={cardRef} collapsable={false}>
-      <TouchableOpacity
-        style={[styles.card, isHighlighted && styles.highlightedCard]}
-        onPress={handlePress}
-        activeOpacity={0.7}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.card,
+          isHighlighted && styles.highlightedCard,
+          { opacity: pressed ? 0.7 : 1 },
+        ]}
+        onPress={handlePress}>
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.name} numberOfLines={1}>
               {poi.name}
             </Text>
             {onZoom && (
-              <TouchableOpacity
-                onPress={() => onZoom(poi)}
-                style={styles.zoomButton}
+              <Pressable
+                onPress={e => {
+                  console.log('PoiCard zoom button pressed');
+                  e.stopPropagation();
+                  onZoom(poi);
+                }}
+                style={({ pressed }) => [styles.zoomButton, { opacity: pressed ? 0.7 : 1 }]}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Ionicons name="map-outline" size={20} color="#000000" />
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
           <View style={styles.row}>
@@ -77,7 +84,7 @@ export default function PoiCard({ poi, onPress, onZoom, isHighlighted }: PoiCard
             </View>
           </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
