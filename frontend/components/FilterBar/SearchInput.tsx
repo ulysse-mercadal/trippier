@@ -54,17 +54,11 @@ export default function SearchInput({
         !isExpanded && 'cursor-pointer shadow-lg',
       )}
       style={{
-        width: isExpanded
-          ? isSmallScreen
-            ? 'calc(100vw - 24px)'
-            : 'calc(33vw - 40px)'
-          : isSmallScreen
-            ? 'calc(100vw - 40px)'
-            : '350px',
+        width: isSmallScreen ? 'calc(100vw - 40px)' : isExpanded ? 'calc(33vw - 40px)' : '350px',
         height: '48px',
         borderRadius: '999px',
         top: 20,
-        left: isSmallScreen && isExpanded ? 12 : 20,
+        left: 20,
       }}
       onClick={!isExpanded ? toggleSearch : undefined}>
       <div className="flex items-center min-h-12 px-4 relative bg-white">
