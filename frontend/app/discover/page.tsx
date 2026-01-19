@@ -33,6 +33,7 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
 
   useEffect(() => {
@@ -43,6 +44,24 @@ export default function DiscoverPage() {
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
   }, []);
+
+  const orderedNearbyPois = React.useMemo(() => {
+    if (!focusedPoi) {
+      return nearbyPois;
+    }
+    return [focusedPoi, ...nearbyPois.filter(p => p.place_id !== focusedPoi.place_id)];
+  }, [nearbyPois, focusedPoi]);
+
+  const orderedSearchResults = React.useMemo(() => {
+    if (!focusedPoi) {
+      return searchResults;
+    }
+    const exists = searchResults.some(p => p.place_id === focusedPoi.place_id);
+    if (!exists) {
+      return searchResults;
+    }
+    return [focusedPoi, ...searchResults.filter(p => p.place_id !== focusedPoi.place_id)];
+  }, [searchResults, focusedPoi]);
 
   const fetchNearby = useCallback(async (lat: number, lng: number) => {
     try {
@@ -98,6 +117,7 @@ export default function DiscoverPage() {
   const handlePoiSelect = useCallback(async (poi: POI | null) => {
     setSelectedPoi(poi);
     if (poi) {
+      setFocusedPoi(poi);
       const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
       const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
       lastCoords.current = { lat, lng };
@@ -128,7 +148,13 @@ export default function DiscoverPage() {
       } finally {
         setLoading(false);
       }
+    } else {
+      setFocusedPoi(null);
     }
+  }, []);
+
+  const handleZoomToPoi = useCallback((poi: POI) => {
+    setFocusedPoi(poi);
   }, []);
 
   return (
@@ -137,40 +163,53 @@ export default function DiscoverPage() {
         isExpanded={isExpanded}
         onToggle={setIsExpanded}
         isSmallScreen={isSmallScreen}
-        nearbyPois={nearbyPois}
-        searchResults={searchResults}
+        nearbyPois={orderedNearbyPois}
+        searchResults={orderedSearchResults}
         searchQuery={searchQuery}
         loading={loading}
         onSearch={handleSearch}
         onPoiSelect={handlePoiSelect}
         selectedPoi={selectedPoi}
+        onZoom={handleZoomToPoi}
+        focusedPoi={focusedPoi}
       />
       <motion.div
         className="absolute z-10 overflow-hidden shadow-2xl"
         initial={false}
         animate={{
-          top: isExpanded ? 12 : 0,
-          left: isExpanded ? (isSmallScreen ? '100vw' : '33vw') : 0,
-          right: isExpanded ? 12 : 0,
-          bottom: isExpanded ? 12 : 0,
-          borderRadius: isExpanded ? 24 : 0,
+          top: isExpanded ? (isSmallScreen ? 0 : 12) : 0,
+          left: isExpanded ? (isSmallScreen ? 0 : '33vw') : 0,
+          right: isExpanded ? (isSmallScreen ? 0 : 12) : 0,
+          bottom: isExpanded ? (isSmallScreen ? 0 : 12) : 0,
+          borderRadius: isExpanded ? (isSmallScreen ? 0 : 24) : 0,
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
         <Map
           onCenterChanged={handleMapMove}
           targetLocation={
-            selectedPoi
+            focusedPoi
               ? {
                   lat:
-                    typeof selectedPoi.lat === 'string'
-                      ? parseFloat(selectedPoi.lat)
-                      : selectedPoi.lat,
+                    typeof focusedPoi.lat === 'string'
+                      ? parseFloat(focusedPoi.lat)
+                      : focusedPoi.lat,
                   lng:
-                    typeof selectedPoi.lng === 'string'
-                      ? parseFloat(selectedPoi.lng)
-                      : selectedPoi.lng,
+                    typeof focusedPoi.lng === 'string'
+                      ? parseFloat(focusedPoi.lng)
+                      : focusedPoi.lng,
                 }
-              : null
+              : selectedPoi
+                ? {
+                    lat:
+                      typeof selectedPoi.lat === 'string'
+                        ? parseFloat(selectedPoi.lat)
+                        : selectedPoi.lat,
+                    lng:
+                      typeof selectedPoi.lng === 'string'
+                        ? parseFloat(selectedPoi.lng)
+                        : selectedPoi.lng,
+                  }
+                : null
           }
         />
       </motion.div>

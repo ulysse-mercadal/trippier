@@ -21,6 +21,9 @@ interface PoiListViewProps {
   nearbyPois: POI[];
   loading: boolean;
   onPoiSelect?: (poi: POI | null) => void;
+  isSmallScreen?: boolean;
+  onZoom?: (poi: POI) => void;
+  focusedPoi?: POI | null;
 }
 
 export default function PoiListView({
@@ -30,8 +33,11 @@ export default function PoiListView({
   nearbyPois,
   loading,
   onPoiSelect,
+  isSmallScreen,
+  onZoom,
+  focusedPoi,
 }: PoiListViewProps) {
-  if (!isExpanded) {
+  if (!isExpanded && !isSmallScreen) {
     return null;
   }
 
@@ -41,15 +47,15 @@ export default function PoiListView({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col overflow-hidden">
+      className="flex-1 flex flex-col overflow-y-auto scrollbar-hide pb-24">
       <div className="px-6 pt-4 pb-2">
-        <h2 className="text-2xl font-bold">Explore</h2>
+        <h2 className="text-2xl text-black font-bold">Explore</h2>
       </div>
       <AnimatePresence>
         {searchQuery && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: '45%', opacity: 1 }}
+            animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 25 }}
             className="flex flex-col border-b border-gray-100">
@@ -58,7 +64,7 @@ export default function PoiListView({
                 Top Results
               </p>
             </div>
-            <div className="flex-1 overflow-y-auto px-6 pb-4 scrollbar-hide">
+            <div className="px-6 pb-4">
               <div className="grid gap-3">
                 {searchResults.length > 0
                   ? searchResults.map((poi, i) => (
@@ -67,6 +73,8 @@ export default function PoiListView({
                         poi={poi}
                         index={i}
                         onPoiSelect={onPoiSelect}
+                        onZoom={onZoom}
+                        isHighlighted={focusedPoi?.place_id === poi.place_id}
                       />
                     ))
                   : !loading && (
@@ -79,17 +87,24 @@ export default function PoiListView({
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex flex-col">
         <div className="px-6 py-2 mt-2">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             {searchQuery ? 'Famous nearby' : 'Popular nearby'}
           </p>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 pb-24 scrollbar-hide">
+        <div className="px-6">
           <div className="grid gap-3">
             {nearbyPois.length > 0 ? (
               nearbyPois.map((poi, i) => (
-                <PoiCard key={poi.place_id || i} poi={poi} index={i} onPoiSelect={onPoiSelect} />
+                <PoiCard
+                  key={poi.place_id || i}
+                  poi={poi}
+                  index={i}
+                  onPoiSelect={onPoiSelect}
+                  onZoom={onZoom}
+                  isHighlighted={focusedPoi?.place_id === poi.place_id}
+                />
               ))
             ) : loading ? (
               <div className="flex flex-col gap-3">
