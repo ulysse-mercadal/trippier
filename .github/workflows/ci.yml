@@ -84,7 +84,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       - name: Create .env file
-        working-directory: ./mobile
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
           echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
