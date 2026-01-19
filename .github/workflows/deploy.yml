@@ -21,6 +21,7 @@ jobs:
           port: 22
           script: |
             cd ~/trippier
-            git pull origin main
-            sudo docker compose -f docker-compose.prod.yaml up -d --build
+            git fetch origin main
+            git reset --hard origin/main
+            sudo docker compose -f docker-compose.prod.yaml up -d --build --force-recreate
             sudo docker image prune -f

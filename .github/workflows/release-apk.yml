@@ -7,6 +7,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     runs-on: ubuntu-24.04
@@ -30,7 +33,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       - name: Create .env file
-        working-directory: ./mobile
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
           echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
@@ -39,7 +41,7 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease
-          mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/trippier.apk
+          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/trippier.apk
 
       - name: Create Release
         id: create_release

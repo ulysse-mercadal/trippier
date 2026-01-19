@@ -10,7 +10,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion, useAnimation, PanInfo } from 'framer-motion';
 import clsx from 'clsx';
 import { POI } from '../lib/types';
 import PoiListView from './FilterBar/PoiListView';
@@ -28,6 +28,8 @@ interface FilterBarProps {
   onSearch?: (text: string) => void;
   onPoiSelect?: (poi: POI | null) => void;
   selectedPoi?: POI | null;
+  onZoom?: (poi: POI) => void;
+  focusedPoi?: POI | null;
 }
 
 export default function FilterBar({
@@ -41,9 +43,13 @@ export default function FilterBar({
   onSearch,
   onPoiSelect,
   selectedPoi,
+  onZoom,
+  focusedPoi,
 }: FilterBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
+  const controls = useAnimation();
+  const [mobileState, setMobileState] = useState<'hidden' | 'low' | 'medium' | 'high'>('hidden');
 
   useEffect(() => {
     if (isExpanded) {
@@ -60,43 +66,153 @@ export default function FilterBar({
     return () => clearTimeout(timer);
   }, [inputValue, onSearch]);
 
+  useEffect(() => {
+    if (!isSmallScreen) {
+      return;
+    }
+
+    if (selectedPoi) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMobileState('high');
+    } else if (isExpanded) {
+      if (mobileState === 'hidden') {
+        setMobileState('medium');
+      }
+    } else {
+      setMobileState('hidden');
+    }
+  }, [isExpanded, selectedPoi, isSmallScreen, mobileState]);
+
+  useEffect(() => {
+    if (isSmallScreen) {
+      controls.start(mobileState);
+    } else {
+      controls.set({ y: 0, height: '100%' });
+    }
+  }, [mobileState, isSmallScreen, controls]);
+
   const collapseSearch = () => {
     onToggle(false);
     setInputValue('');
     if (onSearch) {
       onSearch('');
     }
+    if (onPoiSelect) {
+      onPoiSelect(null);
+    }
+    if (isSmallScreen) {
+      setMobileState('hidden');
+    }
+  };
+
+  const handleZoom = (poi: POI) => {
+    if (onZoom) {
+      onZoom(poi);
+    }
+    if (isSmallScreen) {
+      setMobileState('low');
+    }
+  };
+
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (!isSmallScreen) {
+      return;
+    }
+    const { offset, velocity } = info;
+    const swipeThreshold = 50;
+    const velocityThreshold = 500;
+    let nextState = mobileState;
+    if (offset.y > swipeThreshold || velocity.y > velocityThreshold) {
+      if (mobileState === 'high') {
+        nextState = 'medium';
+      } else if (mobileState === 'medium') {
+        nextState = 'low';
+      } else if (mobileState === 'low') {
+        nextState = 'hidden';
+      }
+    } else if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) {
+      if (mobileState === 'hidden') {
+        nextState = 'low';
+      } else if (mobileState === 'low') {
+        nextState = 'medium';
+      } else if (mobileState === 'medium') {
+        nextState = 'high';
+      }
+    }
+
+    setMobileState(nextState);
+    if (nextState === 'hidden') {
+      collapseSearch();
+    } else {
+      if (!isExpanded) {
+        onToggle(true);
+      }
+    }
+  };
+
+  const variants = {
+    hidden: { y: '100%' },
+    low: { y: '66%' },
+    medium: { y: '33%' },
+    high: { y: '0%' },
   };
 
   return (
     <>
-      <div
+      <motion.div
+        drag={isSmallScreen ? 'y' : false}
+        dragConstraints={{ top: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+        animate={isSmallScreen ? controls : undefined}
+        variants={isSmallScreen ? variants : undefined}
+        initial={isSmallScreen ? 'hidden' : undefined}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
         className={clsx(
-          'fixed top-0 left-0 h-full bg-white z-0 flex flex-col shadow-2xl transition-all duration-300',
-          selectedPoi ? 'pt-6' : 'pt-20',
+          'fixed bg-white flex flex-col shadow-2xl overflow-hidden',
+          isSmallScreen
+            ? 'bottom-0 left-0 w-full rounded-t-3xl z-30'
+            : 'top-0 left-0 h-full z-0 transition-all duration-300',
+          selectedPoi ? 'pt-0' : isSmallScreen ? 'pt-0' : 'pt-20',
         )}
-        style={{ width: isSmallScreen ? '100vw' : '33vw' }}>
-        <AnimatePresence mode="wait">
-          {!selectedPoi ? (
-            <PoiListView
-              isExpanded={isExpanded}
-              searchQuery={searchQuery}
-              searchResults={searchResults}
-              nearbyPois={nearbyPois}
-              loading={loading}
-              onPoiSelect={onPoiSelect}
-            />
-          ) : (
-            <PoiDetailView
-              selectedPoi={selectedPoi}
-              onPoiSelect={onPoiSelect}
-              loading={loading}
-              onSearch={onSearch}
-              setInputValue={setInputValue}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+        style={{
+          width: isSmallScreen ? '100vw' : '33vw',
+          height: isSmallScreen ? '100vh' : '100%',
+          touchAction: 'none',
+        }}>
+        {isSmallScreen && (
+          <div className="w-full flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing bg-white z-40 shrink-0">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+          </div>
+        )}
+        <div
+          className={clsx('flex-1 flex flex-col min-h-0', !isSmallScreen && selectedPoi && 'pt-6')}>
+          <AnimatePresence mode="wait">
+            {!selectedPoi ? (
+              <PoiListView
+                isExpanded={isExpanded}
+                searchQuery={searchQuery}
+                searchResults={searchResults}
+                nearbyPois={nearbyPois}
+                loading={loading}
+                onPoiSelect={onPoiSelect}
+                isSmallScreen={isSmallScreen}
+                onZoom={handleZoom}
+                focusedPoi={focusedPoi}
+              />
+            ) : (
+              <PoiDetailView
+                selectedPoi={selectedPoi}
+                onPoiSelect={onPoiSelect}
+                loading={loading}
+                onSearch={onSearch}
+                setInputValue={setInputValue}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
       <AnimatePresence>
         {!selectedPoi && (
           <SearchInput

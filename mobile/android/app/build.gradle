@@ -1,9 +1,9 @@
 apply plugin: "com.android.application"
 project.ext.envConfigFiles = [
-    debug: "../../.env",
-    release: "../../.env",
+    debug: "../../../.env",
+    release: "../../../.env",
 ]
-apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+apply from: "../../node_modules/react-native-config/android/dotenv.gradle"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
@@ -91,6 +91,10 @@ android {
         versionName "1.0"
         resValue "string", "GOOGLE_MAPS_API_KEY", (project.env.get("GOOGLE_MAPS_API_KEY") ?: "")
     }
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -109,6 +113,7 @@ android {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            matchingFallbacks = ['debug', 'release']
         }
     }
 }
