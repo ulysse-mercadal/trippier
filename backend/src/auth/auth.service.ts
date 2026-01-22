@@ -30,8 +30,17 @@ export class AuthService {
       password: hashedPassword,
       name,
     });
-    const { password: _password, ...result } = user;
-    return result;
+    
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    };
   }
 
   async login(email: string, pass: string) {
@@ -43,13 +52,14 @@ export class AuthService {
     if (!isMatch) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, email: user.email, role: user.role };
     return {
       access_token: await this.jwtService.signAsync(payload),
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
     };
   }
