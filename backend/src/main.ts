@@ -10,6 +10,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -28,6 +29,15 @@ async function bootstrap() {
       stopAtFirstError: true,
     }),
   );
+
+  const config = new DocumentBuilder()
+    .setTitle('Trippier API')
+    .setDescription('The Trippier API swagger (WIP here !)')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT') || 3000;
