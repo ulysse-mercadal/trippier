@@ -72,7 +72,6 @@ export default function DiscoverScreen() {
 
   const snapTo = useCallback(
     (point: number) => {
-      console.log('snapTo called with:', point);
       drawerTranslateY.value = withSpring(point, { damping: 15 });
     },
     [drawerTranslateY],
@@ -286,7 +285,6 @@ export default function DiscoverScreen() {
 
   const handlePoiSelect = useCallback(
     async (poi: POI, layout?: LayoutInfo) => {
-      console.log('handlePoiSelect called for:', poi.name);
       setSelectedPoi(poi);
       setFocusedPoi(poi);
       setSelectedPoiLayout(layout);
