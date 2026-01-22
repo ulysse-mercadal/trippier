@@ -1,21 +1,19 @@
 {
 	"info": {
 		"_postman_id": "b6a7b6a7-b6a7-b6a7-b6a7-b6a7b6a7b6a7",
-		"name": "Trippier Auth Flow",
+		"name": "Trippier Full RBAC Test",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "Register",
+			"name": "Setup: Create User A",
 			"event": [
 				{
 					"listen": "prerequest",
 					"script": {
 						"exec": [
 							"const randomStr = Math.random().toString(36).substring(7);",
-							"const email = `test_${randomStr}@example.com`;",
-							"pm.environment.set(\"current_email\", email);",
-							"console.log(\"Generated email for registration:\", email);"
+							"pm.environment.set(\"user_a_email\", `user_a_${randomStr}@test.com`);"
 						],
 						"type": "text/javascript"
 					}
@@ -24,18 +22,10 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status code is 201\", function () {",
-							"    pm.response.to.have.status(201);",
-							"});",
-							"",
-							"pm.test(\"Response has access_token and user data\", function () {",
-							"    const jsonData = pm.response.json();",
-							"    pm.expect(jsonData).to.have.property('access_token');",
-							"    pm.expect(jsonData).to.have.property('user');",
-							"    ",
-							"    // Save token for login test or next requests",
-							"    pm.environment.set(\"jwt_token\", jsonData.access_token);",
-							"});"
+							"pm.test(\"User A Registered\", () => pm.response.to.have.status(201));",
+							"const jsonData = pm.response.json();",
+							"pm.environment.set(\"user_a_token\", jsonData.access_token);",
+							"pm.environment.set(\"user_a_id\", jsonData.user.id);"
 						],
 						"type": "text/javascript"
 					}
@@ -43,49 +33,38 @@
 			],
 			"request": {
 				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
+				"header": [{"key": "Content-Type", "value": "application/json"}],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"{{current_email}}\",\n    \"password\": \"password123\",\n    \"name\": \"Test User\"\n}"
+					"raw": "{\"email\": \"{{user_a_email}}\", \"password\": \"password123\", \"name\": \"User A\"}"
 				},
 				"url": {
 					"raw": "{{baseUrl}}/auth/register",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"auth",
-						"register"
-					]
+					"host": ["{{baseUrl}}"],
+					"path": ["auth", "register"]
 				}
-			},
-			"response": []
+			}
 		},
 		{
-			"name": "Login",
+			"name": "Setup: Create User B",
 			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const randomStr = Math.random().toString(36).substring(7);",
+							"pm.environment.set(\"user_b_email\", `user_b_${randomStr}@test.com`);"
+						],
+						"type": "text/javascript"
+					}
+				},
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status code is 200\", function () {",
-							"    pm.response.to.have.status(200);",
-							"});",
-						"",
-						"pm.test(\"Response has access_token and user data\", function () {",
-						"    const jsonData = pm.response.json();",
-						"    pm.expect(jsonData).to.have.property('access_token');",
-						"    pm.expect(jsonData).to.have.property('user');",
-						"    pm.expect(jsonData.user).to.have.property('role');",
-						"    ",
-						"    // Save token for future requests if needed",
-						"    pm.environment.set(\"jwt_token\", jsonData.access_token);",
-						"});"
+							"pm.test(\"User B Registered\", () => pm.response.to.have.status(201));",
+							"const jsonData = pm.response.json();",
+							"pm.environment.set(\"user_b_id\", jsonData.user.id);"
 						],
 						"type": "text/javascript"
 					}
@@ -93,75 +72,292 @@
 			],
 			"request": {
 				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
+				"header": [{"key": "Content-Type", "value": "application/json"}],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"email\": \"{{current_email}}\",\n    \"password\": \"password123\"\n}"
+					"raw": "{\"email\": \"{{user_b_email}}\", \"password\": \"password123\", \"name\": \"User B\"}"
 				},
 				"url": {
-					"raw": "{{baseUrl}}/auth/login",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"auth",
-						"login"
-					]
+					"raw": "{{baseUrl}}/auth/register",
+					"host": ["{{baseUrl}}"],
+					"path": ["auth", "register"]
 				}
-			},
-			"response": []
+			}
 		},
 		{
-			"name": "Get Profile",
+			"name": "User A: Login",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test(\"Status code is 200\", function () {",
-							"    pm.response.to.have.status(200);",
-							"});",
-							"",
-							"pm.test(\"Response has user email and role\", function () {",
-							"    const jsonData = pm.response.json();",
-							"    pm.expect(jsonData).to.have.property('email');",
-							"    pm.expect(jsonData).to.have.property('role');",
-							"});"
+							"pm.test(\"Login OK\", () => pm.response.to.have.status(200));"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
-				"auth": {
-					"type": "bearer",
-					"bearer": [
-						{
-							"key": "token",
-							"value": "{{jwt_token}}",
-							"type": "string"
-						}
-					]
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"email\": \"{{user_a_email}}\", \"password\": \"password123\"}"
 				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/login",
+					"host": ["{{baseUrl}}"],
+					"path": ["auth", "login"]
+				}
+			}
+		},
+		{
+			"name": "User A: Get Me",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Get Me OK\", () => pm.response.to.have.status(200));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
 				"method": "GET",
-				"header": [],
 				"url": {
 					"raw": "{{baseUrl}}/auth/me",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"auth",
-						"me"
-					]
+					"host": ["{{baseUrl}}"],
+					"path": ["auth", "me"]
 				}
-			},
-			"response": []
+			}
+		},
+		{
+			"name": "User A: POST User (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"email\": \"hacker@test.com\", \"password\": \"password\"}"}, 
+				"url": {
+					"raw": "{{baseUrl}}/users",
+					"host": ["{{baseUrl}}"],
+					"path": ["users"]
+				}
+			}
+		},
+		{
+			"name": "User A: GET Users (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/users",
+					"host": ["{{baseUrl}}"],
+					"path": ["users"]
+				}
+			}
+		},
+		{
+			"name": "User A: GET Self (Allowed)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"OK\", () => pm.response.to.have.status(200));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_a_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_a_id}}"]
+				}
+			}
+		},
+		{
+			"name": "User A: PATCH Self (Allowed)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"OK\", () => pm.response.to.have.status(200));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "PATCH",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"name\": \"User A Updated\"}"}, 
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_a_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_a_id}}"]
+				}
+			}
+		},
+		{
+			"name": "User A: GET Other (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_b_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_b_id}}"]
+				}
+			}
+		},
+		{
+			"name": "User A: PATCH Other (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "PATCH",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"name\": \"Hacked\"}"}, 
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_b_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_b_id}}"]
+				}
+			}
+		},
+		{
+			"name": "User A: DELETE Other (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "DELETE",
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_b_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_b_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Admin: Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Admin Login OK\", () => pm.response.to.have.status(200));",
+							"const jsonData = pm.response.json();",
+							"pm.environment.set(\"admin_token\", jsonData.access_token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"email\": \"admin@trippier.com\", \"password\": \"admin123\"}"}, 
+				"url": {
+					"raw": "{{baseUrl}}/auth/login",
+					"host": ["{{baseUrl}}"],
+					"path": ["auth", "login"]
+				}
+			}
+		},
+		{
+			"name": "Admin: POST User (Allowed)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const randomStr = Math.random().toString(36).substring(7);",
+							"pm.environment.set(\"admin_created_email\", `admin_created_${randomStr}@test.com`);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Created\", () => pm.response.to.have.status(201));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, 
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"email\": \"{{admin_created_email}}\", \"password\": \"password123\"}"}, 
+				"url": {
+					"raw": "{{baseUrl}}/users",
+					"host": ["{{baseUrl}}"],
+					"path": ["users"]
+				}
+			}
+		},
+		{
+			"name": "Admin: GET Users (Allowed)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"OK\", () => pm.response.to.have.status(200));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, 
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/users",
+					"host": ["{{baseUrl}}"],
+					"path": ["users"]
+				}
+			}
+		},
+		{
+			"name": "Admin: GET Other User (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, 
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_a_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_a_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Admin: PATCH Other User (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, 
+				"method": "PATCH",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"name\": \"Admin Hacked\"}"}, 
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_a_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_a_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Admin: DELETE Other User (Forbidden)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, 
+				"method": "DELETE",
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_a_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_a_id}}"]
+				}
+			}
+		},
+		{
+			"name": "User A: DELETE Self (Allowed)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test(\"OK\", () => pm.response.to.have.status(200));"], "type": "text/javascript"}}],
+			"request": {
+				"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{user_a_token}}", "type": "string"}]}, 
+				"method": "DELETE",
+				"url": {
+					"raw": "{{baseUrl}}/users/{{user_a_id}}",
+					"host": ["{{baseUrl}}"],
+					"path": ["users", "{{user_a_id}}"]
+				}
+			}
 		}
 	]
 }

@@ -24,10 +24,9 @@ export class AuthService {
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
-    const hashedPassword = await bcrypt.hash(pass, 10);
     const user = await this.usersService.create({
       email,
-      password: hashedPassword,
+      password: pass,
       name,
     });
 
