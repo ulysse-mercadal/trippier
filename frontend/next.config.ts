@@ -11,7 +11,6 @@ import type { NextConfig } from 'next';
 import fs from 'fs';
 import path from 'path';
 
-// Manual env loading from root
 const envPath = path.resolve(__dirname, '../.env');
 if (fs.existsSync(envPath)) {
   const envFile = fs.readFileSync(envPath, 'utf8');
