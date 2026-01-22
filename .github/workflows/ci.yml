@@ -81,7 +81,7 @@ jobs:
           npx wait-on http://localhost:3001
       - name: Run Tests (Postman)
         working-directory: ./backend
-        run: npm run test:e2e:cli
+        run: npm run test:e2e:all
 
   frontend:
     runs-on: ubuntu-latest

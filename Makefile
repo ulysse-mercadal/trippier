@@ -24,6 +24,6 @@ fix-lint:
 	cd mobile && npm run lint -- --fix
 
 test: lint
-	cd backend && npm run test:e2e:cli
+	cd backend && npm run test:e2e:all
 
 .PHONY: up down fclean build-apk lint fix-lint test
