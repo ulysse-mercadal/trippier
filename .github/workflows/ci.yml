@@ -11,8 +11,35 @@ on:
       - dev
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            mobile:
+              - 'mobile/**'
+
   backend:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: trippier_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
@@ -27,15 +54,34 @@ jobs:
       - name: Generate Prisma Client
         working-directory: ./backend
         run: npx prisma generate
+      - name: Run Migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
+        run: npx prisma migrate deploy
+      - name: Seed Database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
+        run: npx prisma db seed
       - name: Lint
         working-directory: ./backend
         run: npm run lint
-      - name: Run Tests
-        working-directory: ./backend
-        run: npm run test
       - name: Build
         working-directory: ./backend
         run: npm run build
+      - name: Start Backend
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
+          JWT_SECRET: super-secret-test-key
+          PORT: 3001
+        run: |
+          npm run start:prod &
+          npx wait-on http://localhost:3001
+      - name: Run Tests (Postman)
+        working-directory: ./backend
+        run: npm run test:e2e:all
 
   frontend:
     runs-on: ubuntu-latest
@@ -61,6 +107,8 @@ jobs:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
   mobile:
+    needs: changes
+    if: ${{ needs.changes.outputs.mobile == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

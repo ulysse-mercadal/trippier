@@ -23,4 +23,7 @@ fix-lint:
 	cd frontend && npm run lint -- --fix
 	cd mobile && npm run lint -- --fix
 
-.PHONY: up down fclean build-apk lint fix-lint
+test: lint
+	cd backend && npm run test:e2e:all
+
+.PHONY: up down fclean build-apk lint fix-lint test

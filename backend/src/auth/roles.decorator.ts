@@ -7,7 +7,8 @@
 //
 // **************************************************************************
 
-import { PartialType } from '@nestjs/swagger';
-import { CreateUserDto } from './create-user.dto';
+import { SetMetadata } from '@nestjs/common';
+import { Role } from '@prisma/client';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export const ROLES_KEY = 'roles';
+export const Roles = (...roles: Role[]) => SetMetadata(ROLES_KEY, roles);
