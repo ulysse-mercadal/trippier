@@ -58,7 +58,7 @@ jobs:
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
-        run: npx prisma migrate deploy
+        run: npx prisma db push
       - name: Seed Database
         working-directory: ./backend
         env:
