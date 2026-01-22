@@ -1,0 +1,641 @@
+{
+  "info": {
+    "_postman_id": "c7a8b7a8-c7a8-c7a8-c7a8-c7a8b7a8b7a8",
+    "name": "Trippier Maps CRUD Test",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Setup: Create User A",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const randomStr = Math.random().toString(36).substring(7);",
+              "pm.environment.set(\"user_a_email\", `user_a_${randomStr}@test.com`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"User A Registered\", () => pm.response.to.have.status(201));",
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"user_a_token\", jsonData.access_token);",
+              "pm.environment.set(\"user_a_id\", jsonData.user.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{user_a_email}}\", \"password\": \"password123\", \"name\": \"User A\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Setup: Create User B",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const randomStr = Math.random().toString(36).substring(7);",
+              "pm.environment.set(\"user_b_email\", `user_b_${randomStr}@test.com`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"User B Registered\", () => pm.response.to.have.status(201));",
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"user_b_token\", jsonData.access_token);",
+              "pm.environment.set(\"user_b_id\", jsonData.user.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{user_b_email}}\", \"password\": \"password123\", \"name\": \"User B\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Admin: Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Admin Login OK\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"admin_token\", jsonData.access_token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"admin@trippier.com\", \"password\": \"admin123\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "User A: Create Private Map",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Map Created\", () => pm.response.to.have.status(201));",
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"map_private_id\", jsonData.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Secret Trip\", \"icon\": \"🤫\", \"description\": \"My secret plans\", \"isPublic\": false}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps"]
+        }
+      }
+    },
+    {
+      "name": "User A: Create Public Map",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Map Created\", () => pm.response.to.have.status(201));",
+              "const jsonData = pm.response.json();",
+              "pm.environment.set(\"map_public_id\", jsonData.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Awesome Public Trip\", \"icon\": \"🌍\", \"description\": \"Everyone can see this\", \"isPublic\": true}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps"]
+        }
+      }
+    },
+    {
+      "name": "User A: List Maps",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Contains at least 2 maps\", () => pm.expect(jsonData.length).to.be.at.least(2));",
+              "pm.test(\"Does not contain POIs\", () => pm.expect(jsonData[0]).to.not.have.property('pois'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps"]
+        }
+      }
+    },
+    {
+      "name": "User B: Get User A's Public Map (Allowed)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_b_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_public_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_public_id}}"]
+        }
+      }
+    },
+    {
+      "name": "User B: Get User A's Private Map (Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_b_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}"]
+        }
+      }
+    },
+    {
+      "name": "Admin: Get User A's Private Map (Forbidden - logic is strict owner check)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}"]
+        }
+      }
+    },
+    {
+      "name": "User A: Add POI to Private Map",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"POI Added\", () => pm.response.to.have.status(201));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Contains POIs array\", () => pm.expect(jsonData.pois).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"place_id\": \"ChIJLU7jZClu5kcR4PcOoO6p3I0\", \"name\": \"Eiffel Tower\", \"lat\": 48.8584, \"lng\": 2.2945, \"description\": \"Iron lady\", \"rating\": 4.7}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois"]
+        }
+      }
+    },
+    {
+      "name": "User A: Get Private Map (Check Simplified POIs)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Has POIs\", () => pm.expect(jsonData.pois.length).to.be.above(0));",
+              "const poi = jsonData.pois[0];",
+              "pm.test(\"POI has simplified fields\", () => {",
+              "    pm.expect(poi).to.have.property('id');",
+              "    pm.expect(poi).to.have.property('lat');",
+              "    pm.expect(poi).to.have.property('lng');",
+              "    pm.expect(poi).to.not.have.property('description');",
+              "    pm.expect(poi).to.not.have.property('rating');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}"]
+        }
+      }
+    },
+    {
+      "name": "User A: Get POI Details (Full Info)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Has Description\", () => pm.expect(jsonData).to.have.property('description', 'Iron lady'));",
+              "pm.test(\"Has Rating\", () => pm.expect(jsonData).to.have.property('rating', 4.7));",
+              "pm.test(\"Has Personal Description Field\", () => pm.expect(jsonData).to.have.property('personalDescription'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois/ChIJLU7jZClu5kcR4PcOoO6p3I0",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois", "ChIJLU7jZClu5kcR4PcOoO6p3I0"]
+        }
+      }
+    },
+    {
+      "name": "User A: Update POI Description",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Personal Description Updated\", () => pm.expect(jsonData).to.have.property('personalDescription', 'My favorite spot!'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"personalDescription\": \"My favorite spot!\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois/ChIJLU7jZClu5kcR4PcOoO6p3I0",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois", "ChIJLU7jZClu5kcR4PcOoO6p3I0"]
+        }
+      }
+    },
+    {
+      "name": "User A: Get Updated POI Details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Personal Description Persisted\", () => pm.expect(jsonData).to.have.property('personalDescription', 'My favorite spot!'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois/ChIJLU7jZClu5kcR4PcOoO6p3I0",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois", "ChIJLU7jZClu5kcR4PcOoO6p3I0"]
+        }
+      }
+    },
+    {
+      "name": "User B: Update User A's POI Description (Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_b_token}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"personalDescription\": \"Hacked Note\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois/ChIJLU7jZClu5kcR4PcOoO6p3I0",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois", "ChIJLU7jZClu5kcR4PcOoO6p3I0"]
+        }
+      }
+    },
+    {
+      "name": "Admin: Update User A's POI Description (Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{admin_token}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"personalDescription\": \"Admin Note\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois/ChIJLU7jZClu5kcR4PcOoO6p3I0",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois", "ChIJLU7jZClu5kcR4PcOoO6p3I0"]
+        }
+      }
+    },
+    {
+      "name": "User B: Add POI to User A's Map (Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_b_token}}", "type": "string" }]
+        },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"place_id\": \"test_poi\", \"name\": \"Hacked POI\", \"lat\": 0, \"lng\": 0}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_public_id}}/pois",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_public_id}}", "pois"]
+        }
+      }
+    },
+    {
+      "name": "User B: Update User A's Map (Forbidden)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Forbidden\", () => pm.response.to.have.status(403));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_b_token}}", "type": "string" }]
+        },
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Hacked Title\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_public_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_public_id}}"]
+        }
+      }
+    },
+    {
+      "name": "User A: Remove POI",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"POI Removed\", () => pm.response.to.have.status(200));",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"POI count decreased\", () => pm.expect(jsonData.pois.length).to.eq(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "DELETE",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}/pois/ChIJLU7jZClu5kcR4PcOoO6p3I0",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}", "pois", "ChIJLU7jZClu5kcR4PcOoO6p3I0"]
+        }
+      }
+    },
+    {
+      "name": "User A: Delete Map",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Map Deleted\", () => pm.response.to.have.status(200));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "DELETE",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}"]
+        }
+      }
+    },
+    {
+      "name": "User A: Get Deleted Map (Not Found)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": ["pm.test(\"Not Found\", () => pm.response.to.have.status(404));"],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/maps/{{map_private_id}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["maps", "{{map_private_id}}"]
+        }
+      }
+    }
+  ]
+}
