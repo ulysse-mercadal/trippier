@@ -13,9 +13,56 @@ model User {
   password String
   name     String?
   role     Role    @default(USER)
+  maps     Map[]
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+model Map {
+  id          Int      @id @default(autoincrement())
+  title       String
+  icon        String?
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+
+  pois        MapPoi[]
+}
+
+model PointOfInterest {
+  id                String   @id
+  name              String
+  lat               Float
+  lng               Float
+  address           String?
+  category          String?
+  rating            Float?
+  userRatingsTotal  Int?
+  thumbnail         String?
+
+  description       String?
+  wikipediaUrl      String?
+  wikivoyageUrl     String?
+  website           String?
+  phoneNumber       String?
+
+  maps              MapPoi[]
+}
+
+model MapPoi {
+  mapId     Int
+  map       Map             @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  poiId     String
+  poi       PointOfInterest @relation(fields: [poiId], references: [id])
+  addedAt   DateTime        @default(now())
+  personalDescription String?
+
+  @@id([mapId, poiId])
 }
