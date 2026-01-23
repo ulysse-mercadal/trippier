@@ -42,9 +42,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storageToken = localStorage.getItem('@Trippier:token');
       const storageUser = localStorage.getItem('@Trippier:user');
       if (storageToken && storageUser) {
-        setToken(storageToken);
-        setUser(JSON.parse(storageUser));
-        client.defaults.headers.common.Authorization = `Bearer ${storageToken}`;
+        try {
+          client.defaults.headers.common.Authorization = `Bearer ${storageToken}`;
+          const response = await client.get('/auth/me');
+          setUser(response.data);
+          setToken(storageToken);
+        } catch (error) {
+          console.error('Session verification failed:', error);
+          localStorage.removeItem('@Trippier:token');
+          localStorage.removeItem('@Trippier:user');
+          delete client.defaults.headers.common.Authorization;
+          setToken(null);
+          setUser(null);
+        }
       }
       setLoading(false);
     }

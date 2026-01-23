@@ -24,6 +24,7 @@ interface SearchInputProps {
   inputRef: React.RefObject<HTMLInputElement | null>;
   isSmallScreen: boolean;
   collapseSearch: () => void;
+  onMyMapsClick?: () => void;
 }
 
 export default function SearchInput({
@@ -35,6 +36,7 @@ export default function SearchInput({
   inputRef,
   isSmallScreen,
   collapseSearch,
+  onMyMapsClick,
 }: SearchInputProps) {
   const toggleSearch = () => {
     if (!isExpanded) {
@@ -119,7 +121,7 @@ export default function SearchInput({
         <div
           className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 -mt-0.5 -mr-0.5"
           onClick={e => e.stopPropagation()}>
-          <ProfileMedal />
+          <ProfileMedal onMyMapsClick={onMyMapsClick} />
         </div>
       </div>
     </motion.div>

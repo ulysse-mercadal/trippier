@@ -47,7 +47,8 @@ export default function PoiListView({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col overflow-y-auto scrollbar-hide pb-24">
+      className="flex-1 flex flex-col overflow-y-auto scrollbar-hide pb-24"
+      onPointerDown={e => e.stopPropagation()}>
       <div className="px-6 pt-4 pb-2">
         <h2 className="text-2xl text-black font-bold">Explore</h2>
       </div>

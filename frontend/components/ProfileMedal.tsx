@@ -13,14 +13,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { IoPersonOutline, IoLogOutOutline } from 'react-icons/io5';
+import { IoPersonOutline, IoMapOutline } from 'react-icons/io5';
 
 interface ProfileMedalProps {
   className?: string;
+  onMyMapsClick?: () => void;
 }
 
-export default function ProfileMedal({ className = '' }: ProfileMedalProps) {
-  const { user, logout } = useAuth();
+export default function ProfileMedal({ className = '', onMyMapsClick }: ProfileMedalProps) {
+  const { user, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +37,7 @@ export default function ProfileMedal({ className = '' }: ProfileMedalProps) {
     };
   }, []);
 
-  if (!user) {
+  if (loading || !user) {
     return null;
   }
 
@@ -77,6 +78,17 @@ export default function ProfileMedal({ className = '' }: ProfileMedalProps) {
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
                 </div>
                 <div className="py-1">
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      if (onMyMapsClick) {
+                        onMyMapsClick();
+                      }
+                    }}
+                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
+                    <IoMapOutline className="mr-3 text-gray-400" size={18} />
+                    My Maps
+                  </button>
                   <Link
                     href="/profile"
                     onClick={() => setIsOpen(false)}
@@ -84,15 +96,6 @@ export default function ProfileMedal({ className = '' }: ProfileMedalProps) {
                     <IoPersonOutline className="mr-3 text-gray-400" size={18} />
                     Profile
                   </Link>
-                  <button
-                    onClick={() => {
-                      setIsOpen(false);
-                      logout();
-                    }}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left">
-                    <IoLogOutOutline className="mr-3 text-red-400" size={18} />
-                    Log out
-                  </button>
                 </div>
               </div>
             </div>

@@ -30,8 +30,8 @@ export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={clsx(
-        'p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors cursor-pointer group flex flex-col',
-        isHighlighted ? 'border-4 border-black' : 'border-4 border-transparent',
+        'p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors cursor-pointer group flex flex-col border',
+        isHighlighted ? 'border-black border-4' : 'border-gray-100',
       )}
       onClick={() => onPoiSelect && onPoiSelect(poi)}>
       <div className="flex items-center justify-between mb-2">
@@ -49,7 +49,6 @@ export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted
           </button>
         )}
       </div>
-
       <div className="flex items-center mb-2">
         <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">
           {poi.distance < 1
@@ -57,7 +56,6 @@ export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted
             : `${poi.distance.toFixed(1)}km`}
         </span>
       </div>
-
       <div className="flex items-center space-x-2">
         <div className="flex items-center text-yellow-500">
           <IoStar size={12} className="mr-0.5" />

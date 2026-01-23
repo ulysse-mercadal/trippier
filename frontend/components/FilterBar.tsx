@@ -12,10 +12,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion, useAnimation, PanInfo } from 'framer-motion';
 import clsx from 'clsx';
-import { POI } from '../lib/types';
+import { POI, Map } from '../lib/types';
 import PoiListView from './FilterBar/PoiListView';
 import PoiDetailView from './FilterBar/PoiDetailView';
+import MapListView from './FilterBar/MapListView';
 import SearchInput from './FilterBar/SearchInput';
+import client from '../lib/client';
 
 interface FilterBarProps {
   isExpanded: boolean;
@@ -50,6 +52,8 @@ export default function FilterBar({
   const [inputValue, setInputValue] = useState('');
   const controls = useAnimation();
   const [mobileState, setMobileState] = useState<'hidden' | 'low' | 'medium' | 'high'>('hidden');
+  const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
+  const [maps, setMaps] = useState<Map[]>([]);
 
   useEffect(() => {
     if (isExpanded) {
@@ -59,18 +63,60 @@ export default function FilterBar({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (onSearch) {
+      if (onSearch && viewMode === 'search') {
         onSearch(inputValue);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [inputValue, onSearch]);
+  }, [inputValue, onSearch, viewMode]);
+
+  const fetchMaps = async () => {
+    try {
+      const response = await client.get('/maps');
+      setMaps(response.data);
+    } catch (error) {
+      console.error('Failed to fetch maps:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode === 'maps') {
+      fetchMaps();
+    }
+  }, [viewMode]);
+
+  const handleDeleteMap = async (id: number) => {
+    try {
+      await client.delete(`/maps/${id}`);
+      fetchMaps();
+    } catch (error) {
+      console.error('Failed to delete map:', error);
+      alert('Failed to delete map.');
+    }
+  };
+
+  const handleUpdateMap = async (id: number, data: Partial<Map>) => {
+    try {
+      await client.patch(`/maps/${id}`, data);
+      fetchMaps();
+    } catch (error) {
+      console.error('Failed to update map:', error);
+      alert('Failed to update map.');
+    }
+  };
+
+  const handleMyMapsClick = () => {
+    setViewMode('maps');
+    onToggle(true);
+    if (isSmallScreen) {
+      setMobileState('medium');
+    }
+  };
 
   useEffect(() => {
     if (!isSmallScreen) {
       return;
     }
-
     if (selectedPoi) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMobileState('high');
@@ -82,7 +128,6 @@ export default function FilterBar({
       setMobileState('hidden');
     }
   }, [isExpanded, selectedPoi, isSmallScreen, mobileState]);
-
   useEffect(() => {
     if (isSmallScreen) {
       controls.start(mobileState);
@@ -103,6 +148,7 @@ export default function FilterBar({
     if (isSmallScreen) {
       setMobileState('hidden');
     }
+    setViewMode('search');
   };
 
   const handleZoom = (poi: POI) => {
@@ -139,7 +185,6 @@ export default function FilterBar({
         nextState = 'high';
       }
     }
-
     setMobileState(nextState);
     if (nextState === 'hidden') {
       collapseSearch();
@@ -188,7 +233,15 @@ export default function FilterBar({
         <div
           className={clsx('flex-1 flex flex-col min-h-0', !isSmallScreen && selectedPoi && 'pt-6')}>
           <AnimatePresence mode="wait">
-            {!selectedPoi ? (
+            {viewMode === 'maps' && !selectedPoi ? (
+              <MapListView
+                maps={maps}
+                onDelete={handleDeleteMap}
+                onUpdate={handleUpdateMap}
+                onMapCreated={fetchMaps}
+                onClick={m => console.log('Clicked map', m.id)}
+              />
+            ) : !selectedPoi ? (
               <PoiListView
                 isExpanded={isExpanded}
                 searchQuery={searchQuery}
@@ -212,7 +265,6 @@ export default function FilterBar({
           </AnimatePresence>
         </div>
       </motion.div>
-
       <AnimatePresence>
         {!selectedPoi && (
           <SearchInput
@@ -220,10 +272,16 @@ export default function FilterBar({
             loading={loading}
             inputValue={inputValue}
             setInputValue={setInputValue}
-            onToggle={onToggle}
+            onToggle={expanded => {
+              onToggle(expanded);
+              if (expanded) {
+                setViewMode('search');
+              }
+            }}
             inputRef={inputRef}
             isSmallScreen={isSmallScreen}
             collapseSearch={collapseSearch}
+            onMyMapsClick={handleMyMapsClick}
           />
         )}
       </AnimatePresence>

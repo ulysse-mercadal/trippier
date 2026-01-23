@@ -29,4 +29,9 @@ export class CreateMapDto {
   @IsBoolean()
   @IsOptional()
   isPublic?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsBoolean()
+  @IsOptional()
+  isVisible?: boolean;
 }
