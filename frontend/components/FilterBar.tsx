@@ -147,6 +147,14 @@ export default function FilterBar({
     }
   };
 
+  const handleMapClickFromPoi = (mapId: number) => {
+    if (onPoiSelect) {
+      onPoiSelect(null);
+    }
+    setViewMode('maps');
+    setSelectedMapId(mapId);
+  };
+
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (!isSmallScreen) {
       return;
@@ -227,6 +235,8 @@ export default function FilterBar({
                 loading={loading}
                 onSearch={onSearch}
                 setInputValue={setInputValue}
+                maps={maps}
+                onMapClick={handleMapClickFromPoi}
               />
             ) : viewMode === 'maps' ? (
               selectedMap ? (

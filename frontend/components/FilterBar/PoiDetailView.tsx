@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   IoArrowBack,
@@ -21,10 +21,11 @@ import {
   IoCheckmarkOutline,
   IoCallOutline,
   IoReaderOutline,
+  IoBookmarkOutline,
 } from 'react-icons/io5';
 import clsx from 'clsx';
 import Image from 'next/image';
-import { POI } from '../../lib/types';
+import { POI, Map } from '../../lib/types';
 
 interface PoiDetailViewProps {
   selectedPoi: POI;
@@ -32,6 +33,8 @@ interface PoiDetailViewProps {
   loading: boolean;
   onSearch?: (text: string) => void;
   setInputValue: (val: string) => void;
+  maps?: Map[];
+  onMapClick?: (mapId: number) => void;
 }
 
 export default function PoiDetailView({
@@ -40,9 +43,21 @@ export default function PoiDetailView({
   loading,
   onSearch,
   setInputValue,
+  maps = [],
+  onMapClick,
 }: PoiDetailViewProps) {
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
+
+  const savedInMaps = useMemo(() => {
+    return maps.filter(m =>
+      m.pois?.some(
+        p =>
+          Number(p.lat).toFixed(6) === Number(selectedPoi.lat).toFixed(6) &&
+          Number(p.lng).toFixed(6) === Number(selectedPoi.lng).toFixed(6),
+      ),
+    );
+  }, [maps, selectedPoi.lat, selectedPoi.lng]);
 
   const copyToClipboard = (text: string) => {
     if (copied) {
@@ -216,6 +231,37 @@ export default function PoiDetailView({
           </h4>
           <p className="text-sm text-gray-500">{selectedPoi.address}</p>
         </section>
+
+        {savedInMaps.length > 0 && (
+          <section className="pt-4 border-t border-gray-100">
+            <div className="flex items-center text-gray-400 mb-4">
+              <IoBookmarkOutline size={20} className="mr-2" />
+              <h4 className="text-xs font-bold uppercase tracking-wider">Saved in your maps</h4>
+            </div>
+            <div className="flex flex-col gap-2">
+              {savedInMaps.map(map => (
+                <button
+                  key={map.id}
+                  onClick={() => onMapClick?.(map.id)}
+                  className="flex items-center p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all border border-gray-100 group">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl shadow-sm mr-3">
+                    {map.icon || '🌍'}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-bold text-gray-900 truncate">{map.title}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                      {map.pois?.length || 0} locations
+                    </p>
+                  </div>
+                  <IoArrowBack
+                    size={16}
+                    className="rotate-180 text-gray-300 group-hover:text-black transition-colors"
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </motion.div>
   );
