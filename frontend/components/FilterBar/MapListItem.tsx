@@ -148,7 +148,7 @@ export default function MapListItem({ map, onDelete, onUpdate, onClick }: MapLis
             <div className="flex items-center mb-1 overflow-hidden">
               <h3 className="font-bold text-gray-900 truncate mr-2">{map.title}</h3>
               <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
-                {map.pois?.length || 0} poi{map.pois?.length !== 1 ? 's' : ''}
+                {map.pois?.length || 0} location{map.pois?.length !== 1 ? 's' : ''}
               </span>
             </div>
             {map.description && (
