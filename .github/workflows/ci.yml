@@ -25,15 +25,14 @@ jobs:
         id: filter
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            # On compare le dernier commit de la branche source (HEAD^2) par rapport à son parent
+            echo "Comparing last commit of PR branch"
+            git diff --name-only HEAD^2~1 HEAD^2 > changes.txt
           else
-            BASE_SHA="${{ github.event.before }}"
-            if [ "$BASE_SHA" == "0000000000000000000000000000000000000000" ] || [ -z "$BASE_SHA" ]; then
-              BASE_SHA="HEAD^"
-            fi
+            # On compare le dernier commit poussé par rapport à son parent
+            echo "Comparing HEAD~1 to HEAD"
+            git diff --name-only HEAD~1 HEAD > changes.txt
           fi
-          echo "Comparing $BASE_SHA to HEAD"
-          git diff --name-only $BASE_SHA HEAD > changes.txt
           cat changes.txt
           if grep -q "^backend/" changes.txt; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
           if grep -q "^frontend/" changes.txt; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
