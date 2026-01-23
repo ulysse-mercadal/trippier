@@ -16,6 +16,7 @@ import clsx from 'clsx';
 import { POI } from '../../lib/types';
 import MapSelectionModal from '../MapSelectionModal';
 import { TbZoomInArea } from 'react-icons/tb';
+import { useAuth } from '../../context/AuthContext';
 
 interface PoiCardProps {
   poi: POI;
@@ -35,6 +36,7 @@ export default function PoiCard({
   onMapsChange,
 }: PoiCardProps) {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <>
@@ -62,14 +64,16 @@ export default function PoiCard({
                 <TbZoomInArea size={16} />
               </button>
             )}
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                setIsSaveModalOpen(true);
-              }}
-              className="p-1.5 bg-black rounded-lg hover:bg-gray-800 transition-colors text-white">
-              <IoBookmark size={16} />
-            </button>
+            {user && (
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  setIsSaveModalOpen(true);
+                }}
+                className="p-1.5 bg-black rounded-lg hover:bg-gray-800 transition-colors text-white">
+                <IoBookmark size={16} />
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center mb-2">
