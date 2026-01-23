@@ -34,4 +34,5 @@ export interface Map {
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
+  pois?: { poi: POI }[];
 }

@@ -21,6 +21,7 @@ import {
   IoLockOpen,
 } from 'react-icons/io5';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import ConfirmationModal from '../ConfirmationModal';
 
 interface MapListItemProps {
   map: Map;
@@ -36,6 +37,7 @@ export default function MapListItem({ map, onDelete, onUpdate, onClick }: MapLis
   const [icon, setIcon] = useState(map.icon || '🌍');
   const [showPicker, setShowPicker] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -58,9 +60,7 @@ export default function MapListItem({ map, onDelete, onUpdate, onClick }: MapLis
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this map?')) {
-      onDelete(map.id);
-    }
+    setDeleteConfirmOpen(true);
   };
 
   const handleVisibilityClick = (e: React.MouseEvent) => {
@@ -136,67 +136,84 @@ export default function MapListItem({ map, onDelete, onUpdate, onClick }: MapLis
   }
 
   return (
-    <div
-      onClick={() => onClick(map)}
-      className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer group flex items-stretch relative overflow-hidden min-h-20 border border-gray-100">
-      <div className="flex-1 p-4 pr-20 flex items-center space-x-4">
-        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm shrink-0">
-          {map.icon || '🌍'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 truncate mb-1">{map.title}</h3>
-          {map.description && (
-            <p className="text-sm text-gray-500 line-clamp-1">{map.description}</p>
-          )}
-        </div>
-      </div>
+    <>
       <div
-        className={`absolute right-10 top-0 bottom-0 flex items-center justify-center w-12 transition-opacity duration-200 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
-        <button
+        onClick={() => onClick(map)}
+        className="bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer group flex items-stretch relative overflow-hidden min-h-20 border border-gray-100">
+        <div className="flex-1 p-4 pr-20 flex items-center space-x-4">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm shrink-0">
+            {map.icon || '🌍'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="font-bold text-gray-900 truncate pr-2">{map.title}</h3>
+              <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full shrink-0">
+                {map.pois?.length || 0}
+              </span>
+            </div>
+            {map.description && (
+              <p className="text-sm text-gray-500 line-clamp-1">{map.description}</p>
+            )}
+          </div>
+        </div>
+        <div
+          className={`absolute right-10 top-0 bottom-0 flex items-center justify-center w-12 transition-opacity duration-200 ${isHovered ? 'opacity-0' : 'opacity-100'}`}>
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              onUpdate(map.id, { isVisible: !map.isVisible });
+            }}
+            className="w-10 h-10 bg-white rounded-xl text-gray-900 flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors">
+            {!map.isVisible ? <IoEyeOff size={20} /> : <IoEye size={20} />}
+          </button>
+        </div>
+        <div
+          className="absolute top-0 bottom-0 right-0 flex"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
           onClick={e => {
             e.stopPropagation();
-            onUpdate(map.id, { isVisible: !map.isVisible });
-          }}
-          className="w-10 h-10 bg-white rounded-xl text-gray-900 flex items-center justify-center border border-gray-100 hover:bg-gray-50 transition-colors">
-          {!map.isVisible ? <IoEyeOff size={20} /> : <IoEye size={20} />}
-        </button>
-      </div>
-      <div
-        className="absolute top-0 bottom-0 right-0 flex"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onClick={e => {
-          e.stopPropagation();
-          setIsHovered(!isHovered);
-        }}>
-        <div
-          className={`flex flex-col bg-white overflow-hidden transition-all duration-300 ease-out border-l border-gray-100 ${isHovered ? 'w-16' : 'w-0'}`}>
-          <button
-            onClick={handleDeleteClick}
-            className="flex-1 w-full bg-white hover:bg-red-50 text-red-500 flex items-center justify-center transition-colors border-b border-gray-100"
-            title="Delete">
-            <IoTrash size={18} />
-          </button>
-          <button
-            onClick={handleEditClick}
-            className="flex-1 w-full bg-white hover:bg-gray-50 text-gray-700 flex items-center justify-center transition-colors border-b border-gray-100"
-            title="Edit">
-            <IoPencil size={18} />
-          </button>
-          <button
-            onClick={handleVisibilityClick}
-            className={`flex-1 w-full bg-white flex items-center justify-center transition-colors ${map.isPublic ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-50'}`}
-            title={map.isPublic ? 'Make Private' : 'Make Public'}>
-            {map.isPublic ? <IoLockOpen size={18} /> : <IoLockClosed size={18} />}
-          </button>
-        </div>
-        <div className="w-6 bg-white flex items-center justify-center text-gray-400 z-10 cursor-pointer border-l border-gray-100">
+            setIsHovered(!isHovered);
+          }}>
           <div
-            className={`transition-transform duration-300 ${isHovered ? 'rotate-180' : 'rotate-0'}`}>
-            <IoChevronBack size={14} />
+            className={`flex flex-col bg-white overflow-hidden transition-all duration-300 ease-out border-l border-gray-100 ${isHovered ? 'w-16' : 'w-0'}`}>
+            <button
+              onClick={handleDeleteClick}
+              className="flex-1 w-full bg-white hover:bg-red-50 text-red-500 flex items-center justify-center transition-colors border-b border-gray-100"
+              title="Delete">
+              <IoTrash size={18} />
+            </button>
+            <button
+              onClick={handleEditClick}
+              className="flex-1 w-full bg-white hover:bg-gray-50 text-gray-700 flex items-center justify-center transition-colors border-b border-gray-100"
+              title="Edit">
+              <IoPencil size={18} />
+            </button>
+            <button
+              onClick={handleVisibilityClick}
+              className={`flex-1 w-full bg-white flex items-center justify-center transition-colors ${map.isPublic ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-50'}`}
+              title={map.isPublic ? 'Make Private' : 'Make Public'}>
+              {map.isPublic ? <IoLockOpen size={18} /> : <IoLockClosed size={18} />}
+            </button>
+          </div>
+          <div className="w-6 bg-white flex items-center justify-center text-gray-400 z-10 cursor-pointer border-l border-gray-100">
+            <div
+              className={`transition-transform duration-300 ${isHovered ? 'rotate-180' : 'rotate-0'}`}>
+              <IoChevronBack size={14} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <ConfirmationModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => onDelete(map.id)}
+        title="Delete Map"
+        message="Are you sure you want to delete this map?"
+        confirmText="Delete"
+        cancelText="Back"
+        isDanger={true}
+      />
+    </>
   );
 }

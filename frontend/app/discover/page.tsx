@@ -14,9 +14,9 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import FilterBar from '../../components/FilterBar';
 import client from '../../lib/client';
-import { POI } from '../../lib/types';
+import { POI, Map as MapType } from '../../lib/types';
 
-const Map = dynamic(() => import('../../components/Map'), {
+const MapComponent = dynamic(() => import('../../components/Map'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-gray-900 flex items-center justify-center text-white">
@@ -34,6 +34,7 @@ export default function DiscoverPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
+  const [maps, setMaps] = useState<MapType[]>([]);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
 
   useEffect(() => {
@@ -44,6 +45,53 @@ export default function DiscoverPage() {
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
   }, []);
+
+  const fetchMaps = useCallback(async () => {
+    try {
+      const response = await client.get('/maps');
+      setMaps(response.data);
+    } catch (error) {
+      console.error('Failed to fetch maps:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMaps();
+  }, [fetchMaps]);
+
+  const handleDeleteMap = async (id: number) => {
+    try {
+      await client.delete(`/maps/${id}`);
+      fetchMaps();
+    } catch (error) {
+      console.error('Failed to delete map:', error);
+      alert('Failed to delete map.');
+    }
+  };
+
+  const handleUpdateMap = async (id: number, data: Partial<MapType>) => {
+    try {
+      await client.patch(`/maps/${id}`, data);
+      fetchMaps();
+    } catch (error) {
+      console.error('Failed to update map:', error);
+      alert('Failed to update map.');
+    }
+  };
+
+  const visibleMapPois = React.useMemo(() => {
+    const poisMap = new Map<string, { poi: POI; mapIcon: string }>();
+    maps.forEach(map => {
+      if (map.isVisible && map.pois) {
+        map.pois.forEach(p => {
+          if (!poisMap.has(p.poi.place_id)) {
+            poisMap.set(p.poi.place_id, { poi: p.poi, mapIcon: map.icon || '🌍' });
+          }
+        });
+      }
+    });
+    return Array.from(poisMap.values());
+  }, [maps]);
 
   const orderedNearbyPois = React.useMemo(() => {
     if (!focusedPoi) {
@@ -172,6 +220,10 @@ export default function DiscoverPage() {
         selectedPoi={selectedPoi}
         onZoom={handleZoomToPoi}
         focusedPoi={focusedPoi}
+        maps={maps}
+        onDeleteMap={handleDeleteMap}
+        onUpdateMap={handleUpdateMap}
+        onMapCreated={fetchMaps}
       />
       <motion.div
         className="absolute z-10 overflow-hidden shadow-2xl"
@@ -184,8 +236,10 @@ export default function DiscoverPage() {
           borderRadius: isExpanded ? (isSmallScreen ? 0 : 24) : 0,
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-        <Map
+        <MapComponent
           onCenterChanged={handleMapMove}
+          mapPois={visibleMapPois}
+          onPoiClick={handlePoiSelect}
           targetLocation={
             focusedPoi
               ? {

@@ -10,7 +10,8 @@
 'use client';
 
 import React, { useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, OverlayView } from '@react-google-maps/api';
+import { POI } from '../lib/types';
 
 const containerStyle = {
   width: '100%',
@@ -36,9 +37,11 @@ const mapStyle = [
 interface MapProps {
   onCenterChanged?: (lat: number, lng: number) => void;
   targetLocation?: { lat: number; lng: number } | null;
+  mapPois?: { poi: POI; mapIcon: string }[];
+  onPoiClick?: (poi: POI) => void;
 }
 
-export default function Map({ onCenterChanged, targetLocation }: MapProps) {
+export default function Map({ onCenterChanged, targetLocation, mapPois, onPoiClick }: MapProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -124,6 +127,30 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
           }}
         />
       )}
+      {mapPois?.map(item => (
+        <OverlayView
+          key={item.poi.place_id}
+          position={{
+            lat: typeof item.poi.lat === 'string' ? parseFloat(item.poi.lat) : item.poi.lat,
+            lng: typeof item.poi.lng === 'string' ? parseFloat(item.poi.lng) : item.poi.lng,
+          }}
+          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+          <div
+            onClick={e => {
+              e.stopPropagation();
+              onPoiClick?.(item.poi);
+            }}
+            className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer group">
+            <div className="relative flex flex-col items-center">
+              <div className="w-10 h-10 bg-white rounded-full border-2 border-black shadow-lg flex items-center justify-center text-xl z-20 transition-transform group-hover:scale-110">
+                {item.mapIcon}
+              </div>
+              <div className="w-0.5 h-3 bg-black -mt-1 z-10"></div>
+              <div className="w-2 h-1 bg-black/50 rounded-full blur-[1px]"></div>
+            </div>
+          </div>
+        </OverlayView>
+      ))}
     </GoogleMap>
   );
 }

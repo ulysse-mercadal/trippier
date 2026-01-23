@@ -58,12 +58,12 @@ export class MapsService {
   async findAll(
     userId: number,
   ): Promise<
-    Pick<
+    (Pick<
       Map,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
-    >[]
+    > & { pois: { poi: PointOfInterest }[] })[]
   > {
-    return await this.prisma.map.findMany({
+    const maps = await this.prisma.map.findMany({
       where: {
         userId,
       },
@@ -76,8 +76,14 @@ export class MapsService {
         isVisible: true,
         createdAt: true,
         updatedAt: true,
+        pois: {
+          select: {
+            poi: true,
+          },
+        },
       },
     });
+    return maps;
   }
 
   async findUserPublicMaps(
