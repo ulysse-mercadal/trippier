@@ -95,7 +95,7 @@ export class MapsController {
   @Get()
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
-  @ApiOperation({ summary: 'Get all maps for the current user (Owner only)' })
+  @ApiOperation({ summary: 'Get all maps for the current user  (Owner only)' })
   async findAll(@Request() req: RequestWithUser): Promise<
     (Pick<
       Map,
