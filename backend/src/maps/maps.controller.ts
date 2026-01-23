@@ -83,7 +83,7 @@ export class MapsController {
     (Pick<
       Map,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
-    > & { pois: { poi: PointOfInterest }[] })[]
+    > & { pois: PointOfInterest[] })[]
   > {
     return await this.mapsService.findAll(req.user.id);
   }

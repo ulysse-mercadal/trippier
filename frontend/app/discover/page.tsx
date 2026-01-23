@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import FilterBar from '../../components/FilterBar';
 import client from '../../lib/client';
 import { POI, Map as MapType } from '../../lib/types';
+import { useAuth } from '../../context/AuthContext';
 
 const MapComponent = dynamic(() => import('../../components/Map'), {
   ssr: false,
@@ -26,6 +27,7 @@ const MapComponent = dynamic(() => import('../../components/Map'), {
 });
 
 export default function DiscoverPage() {
+  const { token } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
@@ -47,19 +49,27 @@ export default function DiscoverPage() {
   }, []);
 
   const fetchMaps = useCallback(async () => {
+    if (!token) {
+      return;
+    }
     try {
       const response = await client.get('/maps');
       setMaps(response.data);
     } catch (error) {
       console.error('Failed to fetch maps:', error);
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
-    fetchMaps();
-  }, [fetchMaps]);
+    if (token) {
+      fetchMaps();
+    }
+  }, [token, fetchMaps]);
 
   const handleDeleteMap = async (id: number) => {
+    if (!token) {
+      return;
+    }
     try {
       await client.delete(`/maps/${id}`);
       fetchMaps();
@@ -70,6 +80,9 @@ export default function DiscoverPage() {
   };
 
   const handleUpdateMap = async (id: number, data: Partial<MapType>) => {
+    if (!token) {
+      return;
+    }
     try {
       await client.patch(`/maps/${id}`, data);
       fetchMaps();
@@ -84,8 +97,9 @@ export default function DiscoverPage() {
     maps.forEach(map => {
       if (map.isVisible && map.pois) {
         map.pois.forEach(p => {
-          if (!poisMap.has(p.poi.place_id)) {
-            poisMap.set(p.poi.place_id, { poi: p.poi, mapIcon: map.icon || '🌍' });
+          const id = p.place_id || p.id;
+          if (id && !poisMap.has(id)) {
+            poisMap.set(id, { poi: p, mapIcon: map.icon || '🌍' });
           }
         });
       }
@@ -224,6 +238,7 @@ export default function DiscoverPage() {
         onDeleteMap={handleDeleteMap}
         onUpdateMap={handleUpdateMap}
         onMapCreated={fetchMaps}
+        onMapsRefresh={fetchMaps}
       />
       <motion.div
         className="absolute z-10 overflow-hidden shadow-2xl"

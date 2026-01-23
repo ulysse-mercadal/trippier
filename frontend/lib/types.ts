@@ -8,6 +8,7 @@
 // **************************************************************************
 
 export interface POI {
+  id?: string;
   place_id: string;
   name: string;
   type: string;
@@ -34,5 +35,5 @@ export interface Map {
   isVisible: boolean;
   createdAt: string;
   updatedAt: string;
-  pois?: { poi: POI }[];
+  pois?: POI[];
 }

@@ -49,7 +49,6 @@ export default function ConfirmationModal({
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
-
   if (!mounted) {
     return null;
   }
@@ -59,7 +58,7 @@ export default function ConfirmationModal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all duration-300 ${
+      className={`fixed inset-0 z-9999 flex items-center justify-center p-4 transition-all duration-300 ${
         isOpen
           ? 'opacity-100 backdrop-blur-sm bg-black/30'
           : 'opacity-0 backdrop-blur-none bg-black/0'
@@ -78,9 +77,7 @@ export default function ConfirmationModal({
             <IoClose size={24} />
           </button>
         </div>
-
         <div className="mb-8 text-gray-600">{message}</div>
-
         <div className="flex space-x-3">
           <button
             onClick={onClose}

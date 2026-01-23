@@ -35,6 +35,7 @@ interface FilterBarProps {
   onDeleteMap?: (id: number) => void;
   onUpdateMap?: (id: number, data: Partial<Map>) => void;
   onMapCreated?: () => void;
+  onMapsRefresh?: () => void;
 }
 
 export default function FilterBar({
@@ -54,6 +55,7 @@ export default function FilterBar({
   onDeleteMap,
   onUpdateMap,
   onMapCreated,
+  onMapsRefresh,
 }: FilterBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
@@ -172,7 +174,6 @@ export default function FilterBar({
     medium: { y: '33%' },
     high: { y: '0%' },
   };
-
   return (
     <>
       <motion.div
@@ -223,6 +224,7 @@ export default function FilterBar({
                 isSmallScreen={isSmallScreen}
                 onZoom={handleZoom}
                 focusedPoi={focusedPoi}
+                onMapsChange={onMapsRefresh}
               />
             ) : (
               <PoiDetailView

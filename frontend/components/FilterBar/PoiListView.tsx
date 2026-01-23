@@ -24,6 +24,7 @@ interface PoiListViewProps {
   isSmallScreen?: boolean;
   onZoom?: (poi: POI) => void;
   focusedPoi?: POI | null;
+  onMapsChange?: () => void;
 }
 
 export default function PoiListView({
@@ -36,6 +37,7 @@ export default function PoiListView({
   isSmallScreen,
   onZoom,
   focusedPoi,
+  onMapsChange,
 }: PoiListViewProps) {
   if (!isExpanded && !isSmallScreen) {
     return null;
@@ -76,6 +78,7 @@ export default function PoiListView({
                         onPoiSelect={onPoiSelect}
                         onZoom={onZoom}
                         isHighlighted={focusedPoi?.place_id === poi.place_id}
+                        onMapsChange={onMapsChange}
                       />
                     ))
                   : !loading && (
@@ -105,6 +108,7 @@ export default function PoiListView({
                   onPoiSelect={onPoiSelect}
                   onZoom={onZoom}
                   isHighlighted={focusedPoi?.place_id === poi.place_id}
+                  onMapsChange={onMapsChange}
                 />
               ))
             ) : loading ? (

@@ -11,7 +11,14 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { IoStar, IoPeople, IoMapOutline, IoBookmark } from 'react-icons/io5';
+import {
+  IoStar,
+  IoPeople,
+  IoMapOutline,
+  IoBookmark,
+  IoEyeOffOutline,
+  IoEyeOutline,
+} from 'react-icons/io5';
 import clsx from 'clsx';
 import { POI } from '../../lib/types';
 import MapSelectionModal from '../MapSelectionModal';
@@ -22,9 +29,17 @@ interface PoiCardProps {
   onPoiSelect?: (poi: POI | null) => void;
   onZoom?: (poi: POI) => void;
   isHighlighted?: boolean;
+  onMapsChange?: () => void;
 }
 
-export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted }: PoiCardProps) {
+export default function PoiCard({
+  poi,
+  index,
+  onPoiSelect,
+  onZoom,
+  isHighlighted,
+  onMapsChange,
+}: PoiCardProps) {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   return (
@@ -43,14 +58,6 @@ export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted
             {poi.name}
           </h3>
           <div className="flex space-x-2 shrink-0">
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                setIsSaveModalOpen(true);
-              }}
-              className="p-1.5 bg-black rounded-lg hover:bg-gray-800 transition-colors text-white">
-              <IoBookmark size={16} />
-            </button>
             {onZoom && (
               <button
                 onClick={e => {
@@ -61,6 +68,14 @@ export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted
                 <IoMapOutline size={16} />
               </button>
             )}
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                setIsSaveModalOpen(true);
+              }}
+              className="p-1.5 bg-black rounded-lg hover:bg-gray-800 transition-colors text-white">
+              <IoEyeOutline size={16} />
+            </button>
           </div>
         </div>
         <div className="flex items-center mb-2">
@@ -87,6 +102,7 @@ export default function PoiCard({ poi, index, onPoiSelect, onZoom, isHighlighted
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
         poi={poi}
+        onMapsChange={onMapsChange}
       />
     </>
   );

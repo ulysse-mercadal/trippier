@@ -12,39 +12,43 @@ import { createPortal } from 'react-dom';
 import { IoClose, IoCheckmark } from 'react-icons/io5';
 import client from '../lib/client';
 import { Map, POI } from '../lib/types';
+import { useAuth } from '../context/AuthContext';
 
 interface MapSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   poi: POI | null;
+  onMapsChange?: () => void;
 }
 
 interface MapWithDetails extends Map {
   hasPoi: boolean;
 }
 
-export default function MapSelectionModal({ isOpen, onClose, poi }: MapSelectionModalProps) {
+export default function MapSelectionModal({
+  isOpen,
+  onClose,
+  poi,
+  onMapsChange,
+}: MapSelectionModalProps) {
+  const { token } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [maps, setMaps] = useState<MapWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
-
   const fetchMapsAndStatus = useCallback(async () => {
-    if (!poi) {
+    if (!poi || !token) {
       return;
     }
     setLoading(true);
     try {
       const { data: userMaps } = await client.get<Map[]>('/maps');
-
       const mapsWithStatus = await Promise.all(
         userMaps.map(async map => {
           try {
-            // We fetch details to check if POI is in the map
-            // Ideally we would have a lighter endpoint or include POIs in the list,
-            // but for now we fetch details.
             const { data: mapDetails } = await client.get<Map>(`/maps/${map.id}`);
-            const hasPoi = mapDetails.pois?.some(p => p.poi.place_id === poi.place_id) || false;
+            const hasPoi =
+              mapDetails.pois?.some(p => (p.place_id || p.id) === poi.place_id) || false;
             return { ...map, hasPoi };
           } catch (e) {
             console.error(`Failed to fetch details for map ${map.id}`, e);
@@ -52,43 +56,37 @@ export default function MapSelectionModal({ isOpen, onClose, poi }: MapSelection
           }
         }),
       );
-
       setMaps(mapsWithStatus);
     } catch (error) {
       console.error('Failed to fetch maps', error);
     } finally {
       setLoading(false);
     }
-  }, [poi]);
+  }, [poi, token]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isOpen && poi) {
+    if (isOpen && poi && token) {
       setIsVisible(true);
       fetchMapsAndStatus();
     } else {
       const timer = setTimeout(() => setIsVisible(false), 300);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, poi, fetchMapsAndStatus]);
+  }, [isOpen, poi, token, fetchMapsAndStatus]);
 
   const toggleMap = async (map: MapWithDetails) => {
     if (!poi) {
       return;
     }
-
-    // Optimistic update
     setMaps(prev => prev.map(m => (m.id === map.id ? { ...m, hasPoi: !m.hasPoi } : m)));
-
     try {
       if (map.hasPoi) {
-        // Remove POI
         await client.delete(`/maps/${map.id}/pois/${poi.place_id}`);
       } else {
-        // Add POI
         await client.post(`/maps/${map.id}/pois`, {
           place_id: poi.place_id,
           name: poi.name,
@@ -106,13 +104,12 @@ export default function MapSelectionModal({ isOpen, onClose, poi }: MapSelection
           phoneNumber: poi.phoneNumber,
         });
       }
+      onMapsChange?.();
     } catch (error) {
       console.error('Failed to update map', error);
-      // Revert optimistic update on error
       setMaps(prev => prev.map(m => (m.id === map.id ? { ...m, hasPoi: map.hasPoi } : m)));
     }
   };
-
   if (!mounted) {
     return null;
   }
@@ -122,7 +119,7 @@ export default function MapSelectionModal({ isOpen, onClose, poi }: MapSelection
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all duration-300 ${
+      className={`fixed inset-0 z-9999 flex items-center justify-center p-4 transition-all duration-300 ${
         isOpen
           ? 'opacity-100 backdrop-blur-sm bg-black/30'
           : 'opacity-0 backdrop-blur-none bg-black/0'
@@ -141,7 +138,6 @@ export default function MapSelectionModal({ isOpen, onClose, poi }: MapSelection
             <IoClose size={24} />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
           {loading ? (
             <div className="flex justify-center py-8">
@@ -179,7 +175,6 @@ export default function MapSelectionModal({ isOpen, onClose, poi }: MapSelection
             ))
           )}
         </div>
-
         <div className="mt-4 pt-4 border-t border-gray-100 shrink-0">
           <button
             onClick={onClose}

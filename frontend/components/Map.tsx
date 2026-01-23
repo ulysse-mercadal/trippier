@@ -88,7 +88,6 @@ export default function Map({ onCenterChanged, targetLocation, mapPois, onPoiCli
       }
     }
   }, [onCenterChanged]);
-
   if (!isLoaded) {
     return (
       <div className="w-full h-full bg-[#212121] flex items-center justify-center text-white">
@@ -113,6 +112,7 @@ export default function Map({ onCenterChanged, targetLocation, mapPois, onPoiCli
         streetViewControl: false,
         fullscreenControl: false,
         gestureHandling: 'greedy',
+        clickableIcons: false,
       }}>
       {targetLocation && (
         <MarkerF
@@ -127,30 +127,41 @@ export default function Map({ onCenterChanged, targetLocation, mapPois, onPoiCli
           }}
         />
       )}
-      {mapPois?.map(item => (
-        <OverlayView
-          key={item.poi.place_id}
-          position={{
-            lat: typeof item.poi.lat === 'string' ? parseFloat(item.poi.lat) : item.poi.lat,
-            lng: typeof item.poi.lng === 'string' ? parseFloat(item.poi.lng) : item.poi.lng,
-          }}
-          mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
-          <div
-            onClick={e => {
-              e.stopPropagation();
-              onPoiClick?.(item.poi);
+      {mapPois?.map((item, index) => {
+        const id = item.poi.place_id || item.poi.id;
+        if (!id) {
+          return null;
+        }
+        return (
+          <OverlayView
+            key={`${id}-${index}`}
+            position={{
+              lat: typeof item.poi.lat === 'string' ? parseFloat(item.poi.lat) : item.poi.lat,
+              lng: typeof item.poi.lng === 'string' ? parseFloat(item.poi.lng) : item.poi.lng,
             }}
-            className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer group">
-            <div className="relative flex flex-col items-center">
-              <div className="w-10 h-10 bg-white rounded-full border-2 border-black shadow-lg flex items-center justify-center text-xl z-20 transition-transform group-hover:scale-110">
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <div
+              onClick={e => {
+                e.stopPropagation();
+                onPoiClick?.(item.poi);
+              }}
+              className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer group hover:z-50"
+              style={{ width: '56px', height: '56px' }}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="white"
+                stroke="#e5e7eb"
+                strokeWidth="1"
+                className="w-full h-full drop-shadow-md group-hover:scale-110 transition-transform origin-bottom">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+              </svg>
+              <div className="absolute top-0 left-0 w-full h-[75%] flex items-center justify-center text-xl group-hover:scale-110 transition-transform origin-bottom pointer-events-none">
                 {item.mapIcon}
               </div>
-              <div className="w-0.5 h-3 bg-black -mt-1 z-10"></div>
-              <div className="w-2 h-1 bg-black/50 rounded-full blur-[1px]"></div>
             </div>
-          </div>
-        </OverlayView>
-      ))}
+          </OverlayView>
+        );
+      })}
     </GoogleMap>
   );
 }

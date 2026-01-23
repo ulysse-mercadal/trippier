@@ -22,6 +22,7 @@ interface PrismaError {
 export interface PointOfInterestString extends Omit<PointOfInterest, 'lat' | 'lng'> {
   lat: string;
   lng: string;
+  place_id: string;
   personalDescription?: string | null;
 }
 
@@ -61,11 +62,14 @@ export class MapsService {
     (Pick<
       Map,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
-    > & { pois: { poi: PointOfInterest }[] })[]
+    > & { pois: (PointOfInterest & { place_id: string })[] })[]
   > {
     const maps = await this.prisma.map.findMany({
       where: {
         userId,
+      },
+      orderBy: {
+        title: 'asc',
       },
       select: {
         id: true,
@@ -83,7 +87,13 @@ export class MapsService {
         },
       },
     });
-    return maps;
+    return maps.map(map => ({
+      ...map,
+      pois: map.pois.map(p => ({
+        ...p.poi,
+        place_id: p.poi.id,
+      })),
+    }));
   }
 
   async findUserPublicMaps(
@@ -99,6 +109,9 @@ export class MapsService {
         userId,
         isPublic: true,
         isVisible: true,
+      },
+      orderBy: {
+        title: 'asc',
       },
       select: {
         id: true,
@@ -140,19 +153,15 @@ export class MapsService {
         },
       },
     });
-
     if (!map) {
       throw new NotFoundException(`Map with ID ${mapId} not found`);
     }
-
     if (map.userId !== userId) {
       throw new NotFoundException(`Map with ID ${mapId} does not belong to user ${userId}`);
     }
-
     if (!map.isPublic || !map.isVisible) {
       throw new ForbiddenException('You do not have permission to view this map');
     }
-
     const rawMap = map as unknown as { pois: RawMapPoi[] };
     return {
       ...map,
@@ -160,6 +169,7 @@ export class MapsService {
         ...mp.poi,
         lat: String(mp.poi.lat),
         lng: String(mp.poi.lng),
+        place_id: mp.poi.id,
         personalDescription: mp.personalDescription,
       })) as PointOfInterestString[],
     } as MapWithPois;
@@ -171,19 +181,15 @@ export class MapsService {
     poiId: string,
   ): Promise<PointOfInterestString> {
     const map = await this.prisma.map.findUnique({ where: { id: mapId } });
-
     if (!map) {
       throw new NotFoundException(`Map with ID ${mapId} not found`);
     }
-
     if (map.userId !== userId) {
       throw new NotFoundException(`Map with ID ${mapId} does not belong to user ${userId}`);
     }
-
     if (!map.isPublic || !map.isVisible) {
       throw new ForbiddenException('You do not have permission to view this map');
     }
-
     const mapPoi = await this.prisma.mapPoi.findUnique({
       where: {
         mapId_poiId: {
@@ -195,16 +201,15 @@ export class MapsService {
         poi: true,
       },
     });
-
     if (!mapPoi) {
       throw new NotFoundException(`POI ${poiId} not found in map ${mapId}`);
     }
-
     const rawMapPoi = mapPoi as unknown as RawMapPoi;
     return {
       ...rawMapPoi.poi,
       lat: String(rawMapPoi.poi.lat),
       lng: String(rawMapPoi.poi.lng),
+      place_id: rawMapPoi.poi.id,
       personalDescription: rawMapPoi.personalDescription,
     } as PointOfInterestString;
   }
@@ -249,6 +254,7 @@ export class MapsService {
         ...mp.poi,
         lat: String(mp.poi.lat),
         lng: String(mp.poi.lng),
+        place_id: mp.poi.id,
         personalDescription: mp.personalDescription,
       })) as PointOfInterestString[],
     } as MapWithPois;
@@ -285,6 +291,7 @@ export class MapsService {
       ...rawMapPoi.poi,
       lat: String(rawMapPoi.poi.lat),
       lng: String(rawMapPoi.poi.lng),
+      place_id: rawMapPoi.poi.id,
       personalDescription: rawMapPoi.personalDescription,
     } as PointOfInterestString;
   }
@@ -336,6 +343,7 @@ export class MapsService {
         ...rawUpdated.poi,
         lat: String(rawUpdated.poi.lat),
         lng: String(rawUpdated.poi.lng),
+        place_id: rawUpdated.poi.id,
         personalDescription: rawUpdated.personalDescription,
       } as PointOfInterestString;
     } catch (error) {
@@ -396,7 +404,6 @@ export class MapsService {
         phoneNumber: addPoiDto.phoneNumber,
       },
     });
-
     try {
       await this.prisma.mapPoi.create({
         data: {
