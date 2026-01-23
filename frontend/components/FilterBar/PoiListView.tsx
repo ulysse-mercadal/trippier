@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { POI } from '../../lib/types';
+import { POI, Map } from '../../lib/types';
 import PoiCard from './PoiCard';
 
 interface PoiListViewProps {
@@ -25,6 +25,7 @@ interface PoiListViewProps {
   onZoom?: (poi: POI) => void;
   focusedPoi?: POI | null;
   onMapsChange?: () => void;
+  maps?: Map[];
 }
 
 export default function PoiListView({
@@ -38,6 +39,7 @@ export default function PoiListView({
   onZoom,
   focusedPoi,
   onMapsChange,
+  maps = [],
 }: PoiListViewProps) {
   if (!isExpanded && !isSmallScreen) {
     return null;
@@ -79,6 +81,7 @@ export default function PoiListView({
                         onZoom={onZoom}
                         isHighlighted={focusedPoi?.place_id === poi.place_id}
                         onMapsChange={onMapsChange}
+                        maps={maps}
                       />
                     ))
                   : !loading && (
@@ -109,6 +112,7 @@ export default function PoiListView({
                   onZoom={onZoom}
                   isHighlighted={focusedPoi?.place_id === poi.place_id}
                   onMapsChange={onMapsChange}
+                  maps={maps}
                 />
               ))
             ) : loading ? (

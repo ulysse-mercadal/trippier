@@ -18,6 +18,7 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { MapsService } from './maps.service';
 import { CreateMapDto } from './dto/create-map.dto';
@@ -39,6 +40,24 @@ interface RequestWithUser extends ExpressRequest {
 @Controller('maps')
 export class MapsController {
   constructor(private readonly mapsService: MapsService) {}
+
+  @Get('nearby')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get all saved POIs near a location' })
+  async findNearby(
+    @Request() req: RequestWithUser,
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius') radius?: string,
+  ) {
+    return await this.mapsService.findNearbyPois(
+      req.user.id,
+      parseFloat(lat),
+      parseFloat(lng),
+      radius ? parseFloat(radius) : undefined,
+    );
+  }
 
   @Get('other/:userid')
   @ApiOperation({ summary: 'Get all public maps for a specific user (Public)' })

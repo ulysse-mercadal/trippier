@@ -9,11 +9,11 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { IoStar, IoPeople, IoBookmark } from 'react-icons/io5';
+import { IoStar, IoPeople, IoBookmark, IoTrash } from 'react-icons/io5';
 import clsx from 'clsx';
-import { POI } from '../../lib/types';
+import { POI, Map } from '../../lib/types';
 import MapSelectionModal from '../MapSelectionModal';
 import { TbZoomInArea } from 'react-icons/tb';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +25,8 @@ interface PoiCardProps {
   onZoom?: (poi: POI) => void;
   isHighlighted?: boolean;
   onMapsChange?: () => void;
+  maps?: Map[];
+  onDelete?: (poiId: string) => void;
 }
 
 export default function PoiCard({
@@ -34,9 +36,21 @@ export default function PoiCard({
   onZoom,
   isHighlighted,
   onMapsChange,
+  maps = [],
+  onDelete,
 }: PoiCardProps) {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const { user } = useAuth();
+
+  const savedCount = useMemo(() => {
+    return maps.filter(m =>
+      m.pois?.some(
+        p =>
+          Number(p.lat).toFixed(6) === Number(poi.lat).toFixed(6) &&
+          Number(p.lng).toFixed(6) === Number(poi.lng).toFixed(6),
+      ),
+    ).length;
+  }, [maps, poi.lat, poi.lng]);
 
   return (
     <>
@@ -49,11 +63,29 @@ export default function PoiCard({
           isHighlighted ? 'border-black border-4' : 'border-gray-100',
         )}
         onClick={() => onPoiSelect && onPoiSelect(poi)}>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-gray-900 text-base group-hover:text-blue-600 transition-colors line-clamp-1 mr-2 flex-1">
-            {poi.name}
-          </h3>
+        <div className="flex items-center justify-between mb-2 overflow-hidden">
+          <div className="flex items-center flex-1 min-w-0 mr-2">
+            <h3 className="font-bold text-gray-900 text-base group-hover:text-blue-600 transition-colors line-clamp-1">
+              {poi.name}
+            </h3>
+            {savedCount > 0 && (
+              <div className="ml-2 flex items-center bg-white text-black border border-gray-200 px-2 py-0.5 rounded-full shrink-0">
+                <IoBookmark size={10} className="mr-1" />
+                <span className="text-[10px] font-black">{savedCount}</span>
+              </div>
+            )}
+          </div>
           <div className="flex space-x-2 shrink-0">
+            {onDelete && (
+              <button
+                onClick={e => {
+                  e.stopPropagation();
+                  onDelete(poi.place_id || (poi.id as string));
+                }}
+                className="p-1.5 bg-white text-gray-900 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200">
+                <IoTrash size={16} />
+              </button>
+            )}
             {onZoom && (
               <button
                 onClick={e => {
@@ -76,13 +108,15 @@ export default function PoiCard({
             )}
           </div>
         </div>
-        <div className="flex items-center mb-2">
-          <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">
-            {poi.distance < 1
-              ? `${(poi.distance * 1000).toFixed(0)}m`
-              : `${poi.distance.toFixed(1)}km`}
-          </span>
-        </div>
+        {poi.distance !== undefined && (
+          <div className="flex items-center mb-2">
+            <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">
+              {poi.distance < 1
+                ? `${(poi.distance * 1000).toFixed(0)}m`
+                : `${poi.distance.toFixed(1)}km`}
+            </span>
+          </div>
+        )}
         <div className="flex items-center space-x-2">
           <div className="flex items-center text-yellow-500">
             <IoStar size={12} className="mr-0.5" />

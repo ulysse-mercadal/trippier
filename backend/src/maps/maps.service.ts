@@ -13,7 +13,7 @@ import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
 import { AddPoiDto } from './dto/add-poi.dto';
 import { UpdatePoiDto } from './dto/update-poi.dto';
-import { Map, PointOfInterest } from '@prisma/client';
+import { Map as PrismaMap, PointOfInterest } from '@prisma/client';
 
 interface PrismaError {
   code?: string;
@@ -26,7 +26,7 @@ export interface PointOfInterestString extends Omit<PointOfInterest, 'lat' | 'ln
   personalDescription?: string | null;
 }
 
-export interface MapWithPois extends Omit<Map, 'pois'> {
+export interface MapWithPois extends Omit<PrismaMap, 'pois'> {
   pois: PointOfInterestString[];
 }
 
@@ -47,7 +47,7 @@ interface RawMapPoi {
 export class MapsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: number, createMapDto: CreateMapDto): Promise<Map> {
+  async create(userId: number, createMapDto: CreateMapDto): Promise<PrismaMap> {
     return await this.prisma.map.create({
       data: {
         ...createMapDto,
@@ -60,7 +60,7 @@ export class MapsService {
     userId: number,
   ): Promise<
     (Pick<
-      Map,
+      PrismaMap,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
     > & { pois: (PointOfInterest & { place_id: string })[] })[]
   > {
@@ -100,7 +100,7 @@ export class MapsService {
     userId: number,
   ): Promise<
     Pick<
-      Map,
+      PrismaMap,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
     >[]
   > {
@@ -296,7 +296,7 @@ export class MapsService {
     } as PointOfInterestString;
   }
 
-  async update(id: number, userId: number, updateMapDto: UpdateMapDto): Promise<Map> {
+  async update(id: number, userId: number, updateMapDto: UpdateMapDto): Promise<PrismaMap> {
     const map = await this.prisma.map.findUnique({ where: { id } });
     if (!map) {
       throw new NotFoundException(`Map with ID ${id} not found`);
@@ -354,7 +354,7 @@ export class MapsService {
     }
   }
 
-  async remove(id: number, userId: number): Promise<Map> {
+  async remove(id: number, userId: number): Promise<PrismaMap> {
     const map = await this.prisma.map.findUnique({ where: { id } });
     if (!map) {
       throw new NotFoundException(`Map with ID ${id} not found`);
@@ -443,5 +443,55 @@ export class MapsService {
       throw error;
     }
     return await this.findOne(mapId, userId);
+  }
+
+  async findNearbyPois(
+    userId: number,
+    lat: number,
+    lng: number,
+    radius: number = 1,
+  ): Promise<(PointOfInterest & { place_id: string; distance: number })[]> {
+    const mapPois = await this.prisma.mapPoi.findMany({
+      where: {
+        map: {
+          userId,
+        },
+      },
+      include: {
+        poi: true,
+      },
+    });
+    const uniquePois = new Map<string, PointOfInterest>();
+    mapPois.forEach(mp => {
+      if (!uniquePois.has(mp.poiId)) {
+        uniquePois.set(mp.poiId, mp.poi);
+      }
+    });
+
+    const poisWithDistance = Array.from(uniquePois.values()).map(poi => {
+      const distance = this.calculateDistance(lat, lng, poi.lat, poi.lng);
+      return {
+        ...poi,
+        place_id: poi.id,
+        distance,
+      };
+    });
+    return poisWithDistance
+      .filter(p => p.distance <= radius)
+      .sort((a, b) => a.distance - b.distance);
+  }
+
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 }

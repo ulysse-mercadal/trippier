@@ -16,6 +16,7 @@ import { POI, Map } from '../lib/types';
 import PoiListView from './FilterBar/PoiListView';
 import PoiDetailView from './FilterBar/PoiDetailView';
 import MapListView from './FilterBar/MapListView';
+import MapDetailView from './FilterBar/MapDetailView';
 import SearchInput from './FilterBar/SearchInput';
 
 interface FilterBarProps {
@@ -62,6 +63,9 @@ export default function FilterBar({
   const controls = useAnimation();
   const [mobileState, setMobileState] = useState<'hidden' | 'low' | 'medium' | 'high'>('hidden');
   const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
+  const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
+
+  const selectedMap = maps.find(m => m.id === selectedMapId) || null;
 
   useEffect(() => {
     if (isExpanded) {
@@ -87,6 +91,7 @@ export default function FilterBar({
 
   const handleMyMapsClick = () => {
     setViewMode('maps');
+    setSelectedMapId(null);
     onToggle(true);
     if (isSmallScreen) {
       setMobileState('medium');
@@ -108,6 +113,7 @@ export default function FilterBar({
       setMobileState('hidden');
     }
   }, [isExpanded, selectedPoi, isSmallScreen, mobileState]);
+
   useEffect(() => {
     if (isSmallScreen) {
       controls.start(mobileState);
@@ -129,6 +135,7 @@ export default function FilterBar({
       setMobileState('hidden');
     }
     setViewMode('search');
+    setSelectedMapId(null);
   };
 
   const handleZoom = (poi: POI) => {
@@ -181,6 +188,7 @@ export default function FilterBar({
     medium: { y: '33%' },
     high: { y: '0%' },
   };
+
   return (
     <>
       <motion.div
@@ -212,15 +220,33 @@ export default function FilterBar({
         <div
           className={clsx('flex-1 flex flex-col min-h-0', !isSmallScreen && selectedPoi && 'pt-6')}>
           <AnimatePresence mode="wait">
-            {viewMode === 'maps' && !selectedPoi ? (
-              <MapListView
-                maps={maps}
-                onDelete={onDeleteMap || (() => {})}
-                onUpdate={onUpdateMap || (() => {})}
-                onMapCreated={onMapCreated || (() => {})}
-                onClick={m => console.log('Clicked map', m.id)}
+            {selectedPoi ? (
+              <PoiDetailView
+                selectedPoi={selectedPoi}
+                onPoiSelect={onPoiSelect}
+                loading={loading}
+                onSearch={onSearch}
+                setInputValue={setInputValue}
               />
-            ) : !selectedPoi ? (
+            ) : viewMode === 'maps' ? (
+              selectedMap ? (
+                <MapDetailView
+                  map={selectedMap}
+                  onBack={() => setSelectedMapId(null)}
+                  onPoiSelect={onPoiSelect}
+                  onZoom={handleZoom}
+                  onMapsChange={onMapsRefresh}
+                />
+              ) : (
+                <MapListView
+                  maps={maps}
+                  onDelete={onDeleteMap || (() => {})}
+                  onUpdate={onUpdateMap || (() => {})}
+                  onMapCreated={onMapCreated || (() => {})}
+                  onClick={m => setSelectedMapId(m.id)}
+                />
+              )
+            ) : (
               <PoiListView
                 isExpanded={isExpanded}
                 searchQuery={searchQuery}
@@ -232,14 +258,7 @@ export default function FilterBar({
                 onZoom={handleZoom}
                 focusedPoi={focusedPoi}
                 onMapsChange={onMapsRefresh}
-              />
-            ) : (
-              <PoiDetailView
-                selectedPoi={selectedPoi}
-                onPoiSelect={onPoiSelect}
-                loading={loading}
-                onSearch={onSearch}
-                setInputValue={setInputValue}
+                maps={maps}
               />
             )}
           </AnimatePresence>
