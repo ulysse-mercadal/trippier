@@ -28,7 +28,7 @@ import { UpdatePoiDto } from './dto/update-poi.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
-import { Map, PointOfInterest } from '@prisma/client';
+import { Map } from '@prisma/client';
 
 interface RequestWithUser extends ExpressRequest {
   user: {
@@ -96,13 +96,20 @@ export class MapsController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get all maps for the current user (Owner only)' })
-  async findAll(
-    @Request() req: RequestWithUser,
-  ): Promise<
+  async findAll(@Request() req: RequestWithUser): Promise<
     (Pick<
       Map,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
-    > & { pois: PointOfInterest[] })[]
+    > & {
+      pois: {
+        place_id: string;
+        name: string;
+        lat: number;
+        lng: number;
+        rating: number | null;
+        user_ratings_total: number | null;
+      }[];
+    })[]
   > {
     return await this.mapsService.findAll(req.user.id);
   }

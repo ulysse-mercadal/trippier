@@ -120,7 +120,7 @@ export class DiscoverService {
 
   async getPOIDetails(
     place_id: string,
-    name: string,
+    name: string | undefined,
     lat: number,
     lng: number,
   ): Promise<EnrichedWikiData> {
@@ -128,10 +128,15 @@ export class DiscoverService {
     if (this.wikiCache.has(cacheKey)) {
       return this.wikiCache.get(cacheKey)!;
     }
-    const [wikiEN, voyEN, googleDetails] = await Promise.all([
-      this.fetchWikipedia('en.wikipedia.org', name, lat, lng),
+
+    const googleDetails = await this.fetchPlaceDetails(place_id);
+    const resolvedName = name || googleDetails?.name || '';
+
+    const [wikiEN, voyEN] = await Promise.all([
+      resolvedName
+        ? this.fetchWikipedia('en.wikipedia.org', resolvedName, lat, lng)
+        : Promise.resolve(null),
       this.fetchWikivoyage('en.wikivoyage.org', lat, lng),
-      this.fetchPlaceDetails(place_id),
     ]);
     const enriched: EnrichedWikiData = {
       description: voyEN?.summary || wikiEN?.summary || null,
@@ -170,6 +175,7 @@ export class DiscoverService {
       const response = await firstValueFrom(
         this.httpService.get<{
           result: {
+            name?: string;
             website?: string;
             formatted_phone_number?: string;
             international_phone_number?: string;
@@ -177,7 +183,7 @@ export class DiscoverService {
         }>(`https://maps.googleapis.com/maps/api/place/details/json`, {
           params: {
             place_id: placeId,
-            fields: 'website,formatted_phone_number,international_phone_number',
+            fields: 'name,website,formatted_phone_number,international_phone_number',
             key: this.googleApiKey,
           },
         }),

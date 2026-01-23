@@ -190,7 +190,7 @@
               "pm.test(\"Status code is 200\", () => pm.response.to.have.status(200));",
               "const jsonData = pm.response.json();",
               "pm.test(\"Contains at least 2 maps\", () => pm.expect(jsonData.length).to.be.at.least(2));",
-              "pm.test(\"Does not contain POIs\", () => pm.expect(jsonData[0]).to.not.have.property('pois'));"
+              "pm.test(\"Contains POIs array\", () => pm.expect(jsonData[0].pois).to.be.an('array'));"
             ],
             "type": "text/javascript"
           }

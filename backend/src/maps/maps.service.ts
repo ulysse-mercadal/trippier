@@ -62,7 +62,16 @@ export class MapsService {
     (Pick<
       PrismaMap,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
-    > & { pois: (PointOfInterest & { place_id: string })[] })[]
+    > & {
+      pois: {
+        place_id: string;
+        name: string;
+        lat: number;
+        lng: number;
+        rating: number | null;
+        user_ratings_total: number | null;
+      }[];
+    })[]
   > {
     const maps = await this.prisma.map.findMany({
       where: {
@@ -82,7 +91,16 @@ export class MapsService {
         updatedAt: true,
         pois: {
           select: {
-            poi: true,
+            poi: {
+              select: {
+                id: true,
+                name: true,
+                lat: true,
+                lng: true,
+                rating: true,
+                userRatingsTotal: true,
+              },
+            },
           },
         },
       },
@@ -90,8 +108,12 @@ export class MapsService {
     return maps.map(map => ({
       ...map,
       pois: map.pois.map(p => ({
-        ...p.poi,
         place_id: p.poi.id,
+        name: p.poi.name,
+        lat: p.poi.lat,
+        lng: p.poi.lng,
+        rating: p.poi.rating,
+        user_ratings_total: p.poi.userRatingsTotal,
       })),
     }));
   }
