@@ -58,7 +58,10 @@ export class MapsService {
   async findAll(
     userId: number,
   ): Promise<
-    Pick<Map, 'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'>[]
+    Pick<
+      Map,
+      'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
+    >[]
   > {
     return await this.prisma.map.findMany({
       where: {

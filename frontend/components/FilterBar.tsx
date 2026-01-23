@@ -9,7 +9,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion, useAnimation, PanInfo } from 'framer-motion';
 import clsx from 'clsx';
 import { POI, Map } from '../lib/types';
@@ -70,20 +70,22 @@ export default function FilterBar({
     return () => clearTimeout(timer);
   }, [inputValue, onSearch, viewMode]);
 
-  const fetchMaps = async () => {
+  const fetchMaps = useCallback(async () => {
     try {
       const response = await client.get('/maps');
       setMaps(response.data);
     } catch (error) {
       console.error('Failed to fetch maps:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (viewMode === 'maps') {
-      fetchMaps();
+      (async () => {
+        await fetchMaps();
+      })();
     }
-  }, [viewMode]);
+  }, [viewMode, fetchMaps]);
 
   const handleDeleteMap = async (id: number) => {
     try {

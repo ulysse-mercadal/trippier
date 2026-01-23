@@ -53,7 +53,10 @@ export class MapsController {
   async findAll(
     @Request() req: RequestWithUser,
   ): Promise<
-    Pick<Map, 'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'>[]
+    Pick<
+      Map,
+      'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
+    >[]
   > {
     return await this.mapsService.findAll(req.user.id);
   }
