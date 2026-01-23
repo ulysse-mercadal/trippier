@@ -14,17 +14,28 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          base: ${{ github.event_name == 'push' && 'HEAD^' || github.event.pull_request.base.sha }}
           filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
             mobile:
               - 'mobile/**'
 
   backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     services:
       db:
@@ -84,6 +95,8 @@ jobs:
         run: npm run test:e2e:all
 
   frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

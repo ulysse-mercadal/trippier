@@ -56,9 +56,7 @@ export class MapsService {
     });
   }
 
-  async findAll(
-    userId: number,
-  ): Promise<
+  async findAll(userId: number): Promise<
     (Pick<
       PrismaMap,
       'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
