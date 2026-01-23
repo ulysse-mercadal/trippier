@@ -21,17 +21,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v3
+      - name: Detect Changes
         id: filter
-        with:
-          base: ${{ github.event_name == 'push' && 'HEAD^' || github.event.pull_request.base.sha }}
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-            mobile:
-              - 'mobile/**'
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            if [ "$BASE_SHA" == "0000000000000000000000000000000000000000" ] || [ -z "$BASE_SHA" ]; then
+              BASE_SHA="HEAD^"
+            fi
+          fi
+          echo "Comparing $BASE_SHA to HEAD"
+          git diff --name-only $BASE_SHA HEAD > changes.txt
+          cat changes.txt
+          if grep -q "^backend/" changes.txt; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
+          if grep -q "^frontend/" changes.txt; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
+          if grep -q "^mobile/" changes.txt; then echo "mobile=true" >> $GITHUB_OUTPUT; else echo "mobile=false" >> $GITHUB_OUTPUT; fi
 
   backend:
     needs: changes
