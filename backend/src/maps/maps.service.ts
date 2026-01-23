@@ -80,6 +80,129 @@ export class MapsService {
     });
   }
 
+  async findUserPublicMaps(
+    userId: number,
+  ): Promise<
+    Pick<
+      Map,
+      'id' | 'title' | 'icon' | 'description' | 'isPublic' | 'isVisible' | 'createdAt' | 'updatedAt'
+    >[]
+  > {
+    return await this.prisma.map.findMany({
+      where: {
+        userId,
+        isPublic: true,
+        isVisible: true,
+      },
+      select: {
+        id: true,
+        title: true,
+        icon: true,
+        description: true,
+        isPublic: true,
+        isVisible: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async findUserPublicMap(userId: number, mapId: number): Promise<MapWithPois> {
+    const map = await this.prisma.map.findUnique({
+      where: { id: mapId },
+      include: {
+        pois: {
+          select: {
+            personalDescription: true,
+            poi: {
+              select: {
+                id: true,
+                name: true,
+                lat: true,
+                lng: true,
+                thumbnail: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!map) {
+      throw new NotFoundException(`Map with ID ${mapId} not found`);
+    }
+
+    if (map.userId !== userId) {
+      throw new NotFoundException(`Map with ID ${mapId} does not belong to user ${userId}`);
+    }
+
+    if (!map.isPublic || !map.isVisible) {
+      throw new ForbiddenException('You do not have permission to view this map');
+    }
+
+    const rawMap = map as unknown as { pois: RawMapPoi[] };
+    return {
+      ...map,
+      pois: rawMap.pois.map(mp => ({
+        ...mp.poi,
+        lat: String(mp.poi.lat),
+        lng: String(mp.poi.lng),
+        personalDescription: mp.personalDescription,
+      })) as PointOfInterestString[],
+    } as MapWithPois;
+  }
+
+  async findUserPublicMapPoiDetails(
+    userId: number,
+    mapId: number,
+    poiId: string,
+  ): Promise<PointOfInterestString> {
+    const map = await this.prisma.map.findUnique({ where: { id: mapId } });
+
+    if (!map) {
+      throw new NotFoundException(`Map with ID ${mapId} not found`);
+    }
+
+    if (map.userId !== userId) {
+      throw new NotFoundException(`Map with ID ${mapId} does not belong to user ${userId}`);
+    }
+
+    if (!map.isPublic || !map.isVisible) {
+      throw new ForbiddenException('You do not have permission to view this map');
+    }
+
+    const mapPoi = await this.prisma.mapPoi.findUnique({
+      where: {
+        mapId_poiId: {
+          mapId,
+          poiId,
+        },
+      },
+      include: {
+        poi: true,
+      },
+    });
+
+    if (!mapPoi) {
+      throw new NotFoundException(`POI ${poiId} not found in map ${mapId}`);
+    }
+
+    const rawMapPoi = mapPoi as unknown as RawMapPoi;
+    return {
+      ...rawMapPoi.poi,
+      lat: String(rawMapPoi.poi.lat),
+      lng: String(rawMapPoi.poi.lng),
+      personalDescription: rawMapPoi.personalDescription,
+    } as PointOfInterestString;
+  }
+
   async findOne(id: number, userId: number): Promise<MapWithPois> {
     const map = await this.prisma.map.findUnique({
       where: { id },

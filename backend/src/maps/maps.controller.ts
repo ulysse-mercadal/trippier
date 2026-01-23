@@ -36,19 +36,46 @@ interface RequestWithUser extends ExpressRequest {
 }
 
 @ApiTags('maps')
-@ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
 @Controller('maps')
 export class MapsController {
   constructor(private readonly mapsService: MapsService) {}
 
+  @Get('other/:userid')
+  @ApiOperation({ summary: 'Get all public maps for a specific user (Public)' })
+  async findUserPublicMaps(@Param('userid', ParseIntPipe) userId: number) {
+    return await this.mapsService.findUserPublicMaps(userId);
+  }
+
+  @Get('other/:userid/:mapid')
+  @ApiOperation({ summary: 'Get a specific public map details for a user (Public)' })
+  async findUserPublicMap(
+    @Param('userid', ParseIntPipe) userId: number,
+    @Param('mapid', ParseIntPipe) mapId: number,
+  ) {
+    return await this.mapsService.findUserPublicMap(userId, mapId);
+  }
+
+  @Get('other/:userid/:mapid/pois/:poiId')
+  @ApiOperation({ summary: 'Get details of a specific POI in a public map of a user (Public)' })
+  async findUserPublicMapPoiDetails(
+    @Param('userid', ParseIntPipe) userId: number,
+    @Param('mapid', ParseIntPipe) mapId: number,
+    @Param('poiId') poiId: string,
+  ) {
+    return await this.mapsService.findUserPublicMapPoiDetails(userId, mapId, poiId);
+  }
+
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Create a new map (Owner only)' })
   async create(@Request() req: RequestWithUser, @Body() createMapDto: CreateMapDto) {
     return await this.mapsService.create(req.user.id, createMapDto);
   }
 
   @Get()
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get all maps for the current user (Owner only)' })
   async findAll(
     @Request() req: RequestWithUser,
@@ -62,12 +89,16 @@ export class MapsController {
   }
 
   @Get(':id')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get a specific map details (Owner or Public)' })
   async findOne(@Request() req: RequestWithUser, @Param('id', ParseIntPipe) id: number) {
     return await this.mapsService.findOne(id, req.user.id);
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update a map (Owner only)' })
   async update(
     @Request() req: RequestWithUser,
@@ -78,12 +109,16 @@ export class MapsController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Delete a map (Owner only)' })
   async remove(@Request() req: RequestWithUser, @Param('id', ParseIntPipe) id: number) {
     return await this.mapsService.remove(id, req.user.id);
   }
 
   @Post(':id/pois')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Add a POI to a map (Owner only)' })
   async addPoi(
     @Request() req: RequestWithUser,
@@ -94,6 +129,8 @@ export class MapsController {
   }
 
   @Patch(':id/pois/:poiId')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({
     summary: 'Update a POI in a map (e.g. personal description) (Owner only)',
   })
@@ -107,6 +144,8 @@ export class MapsController {
   }
 
   @Get(':id/pois/:poiId')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({
     summary: 'Get details of a specific POI in a map (Owner or Public)',
   })
@@ -119,6 +158,8 @@ export class MapsController {
   }
 
   @Delete(':id/pois/:poiId')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Remove a POI from a map (Owner only)' })
   async removePoi(
     @Request() req: RequestWithUser,
