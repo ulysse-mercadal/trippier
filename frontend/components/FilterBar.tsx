@@ -70,6 +70,13 @@ export default function FilterBar({
   }, [isExpanded]);
 
   useEffect(() => {
+    if (inputValue.trim() !== '' && viewMode === 'maps') {
+      const timer = setTimeout(() => setViewMode('search'), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [inputValue, viewMode]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       if (onSearch && viewMode === 'search') {
         onSearch(inputValue);

@@ -11,17 +11,11 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  IoStar,
-  IoPeople,
-  IoMapOutline,
-  IoBookmark,
-  IoEyeOffOutline,
-  IoEyeOutline,
-} from 'react-icons/io5';
+import { IoStar, IoPeople, IoBookmark } from 'react-icons/io5';
 import clsx from 'clsx';
 import { POI } from '../../lib/types';
 import MapSelectionModal from '../MapSelectionModal';
+import { TbZoomInArea } from 'react-icons/tb';
 
 interface PoiCardProps {
   poi: POI;
@@ -65,7 +59,7 @@ export default function PoiCard({
                   onZoom(poi);
                 }}
                 className="p-1.5 bg-white rounded-lg hover:bg-gray-50 transition-colors text-gray-900 border border-gray-200">
-                <IoMapOutline size={16} />
+                <TbZoomInArea size={16} />
               </button>
             )}
             <button
@@ -74,7 +68,7 @@ export default function PoiCard({
                 setIsSaveModalOpen(true);
               }}
               className="p-1.5 bg-black rounded-lg hover:bg-gray-800 transition-colors text-white">
-              <IoEyeOutline size={16} />
+              <IoBookmark size={16} />
             </button>
           </div>
         </div>

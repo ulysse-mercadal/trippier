@@ -13,6 +13,7 @@ import { IoClose, IoCheckmark } from 'react-icons/io5';
 import client from '../lib/client';
 import { Map, POI } from '../lib/types';
 import { useAuth } from '../context/AuthContext';
+import CreateMapForm from './CreateMapForm';
 
 interface MapSelectionModalProps {
   isOpen: boolean;
@@ -63,6 +64,11 @@ export default function MapSelectionModal({
       setLoading(false);
     }
   }, [poi, token]);
+
+  const handleMapCreated = () => {
+    fetchMapsAndStatus();
+    onMapsChange?.();
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -137,6 +143,9 @@ export default function MapSelectionModal({
             className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
             <IoClose size={24} />
           </button>
+        </div>
+        <div className="mb-4 shrink-0">
+          <CreateMapForm onMapCreated={handleMapCreated} />
         </div>
         <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
           {loading ? (

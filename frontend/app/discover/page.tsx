@@ -179,6 +179,7 @@ export default function DiscoverPage() {
   const handlePoiSelect = useCallback(async (poi: POI | null) => {
     setSelectedPoi(poi);
     if (poi) {
+      setIsExpanded(true);
       setFocusedPoi(poi);
       const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
       const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
