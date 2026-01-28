@@ -11,7 +11,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { IoStar, IoPeople, IoBookmark, IoTrash } from 'react-icons/io5';
+import { IoBookmark, IoTrash } from 'react-icons/io5';
 import clsx from 'clsx';
 import { POI, Map } from '../../lib/types';
 import MapSelectionModal from '../MapSelectionModal';
@@ -109,7 +109,7 @@ export default function PoiCard({
           </div>
         </div>
         {poi.distance !== undefined && (
-          <div className="flex items-center mb-2">
+          <div className="flex items-center">
             <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">
               {poi.distance < 1
                 ? `${(poi.distance * 1000).toFixed(0)}m`
@@ -117,18 +117,6 @@ export default function PoiCard({
             </span>
           </div>
         )}
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center text-yellow-500">
-            <IoStar size={12} className="mr-0.5" />
-            <span className="text-[10px] font-bold">{poi.rating || 'N/A'}</span>
-          </div>
-          <div className="flex items-center text-gray-400">
-            <IoPeople size={12} className="mr-0.5" />
-            <span className="text-[10px] font-medium">
-              ({poi.user_ratings_total?.toLocaleString() || 0})
-            </span>
-          </div>
-        </div>
       </motion.div>
       <MapSelectionModal
         isOpen={isSaveModalOpen}

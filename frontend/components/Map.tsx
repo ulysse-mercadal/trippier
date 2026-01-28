@@ -35,10 +35,12 @@ export default function MapComponent({
   const mapId = process.env.MAPTILER_MAP_ID || 'dataviz-dark';
   const apiKey = process.env.MAPTILER_API_KEY;
 
-  const mapStyle = React.useMemo(
-    () => `https://api.maptiler.com/maps/${mapId}/style.json?key=${apiKey}`,
-    [mapId, apiKey],
-  );
+  const mapStyle = React.useMemo(() => {
+    if (!apiKey) {
+      return undefined;
+    }
+    return `https://api.maptiler.com/maps/${mapId}/style.json?key=${apiKey}`;
+  }, [mapId, apiKey]);
 
   useEffect(() => {
     if (targetLocation && mapRef.current) {
@@ -55,6 +57,14 @@ export default function MapComponent({
       onCenterChanged(latitude, longitude);
     }
   };
+
+  if (!mapStyle) {
+    return (
+      <div className="w-full h-full bg-[#212121] text-white flex items-center justify-center">
+        Missing API Key
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full bg-[#212121] text-white relative">
