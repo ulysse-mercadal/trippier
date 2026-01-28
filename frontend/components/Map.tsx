@@ -10,7 +10,12 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import Map, { Marker, MapRef, NavigationControl } from 'react-map-gl/maplibre';
+import Map, {
+  Marker,
+  MapRef,
+  NavigationControl,
+  ViewStateChangeEvent,
+} from 'react-map-gl/maplibre';
 import { POI } from '../lib/types';
 
 interface MapProps {
@@ -29,7 +34,11 @@ export default function MapComponent({
   const mapRef = useRef<MapRef>(null);
   const mapId = process.env.MAPTILER_MAP_ID || 'dataviz-dark';
   const apiKey = process.env.MAPTILER_API_KEY;
-  const mapStyle = `https://api.maptiler.com/maps/${mapId}/style.json?key=${apiKey}`;
+
+  const mapStyle = React.useMemo(
+    () => `https://api.maptiler.com/maps/${mapId}/style.json?key=${apiKey}`,
+    [mapId, apiKey],
+  );
 
   useEffect(() => {
     if (targetLocation && mapRef.current) {
@@ -40,10 +49,10 @@ export default function MapComponent({
       });
     }
   }, [targetLocation]);
-  const onMoveEnd = (evt: { viewState: { lng: number; lat: number } }) => {
+  const onMoveEnd = (evt: ViewStateChangeEvent) => {
     if (onCenterChanged) {
-      const { lng, lat } = evt.viewState;
-      onCenterChanged(lat, lng);
+      const { longitude, latitude } = evt.viewState;
+      onCenterChanged(latitude, longitude);
     }
   };
 
