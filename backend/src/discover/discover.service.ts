@@ -80,12 +80,10 @@ export class DiscoverService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-
     const radiusInMeters = Math.min(radius * 1000, 50000);
     const url = q
       ? `https://maps.googleapis.com/maps/api/place/textsearch/json`
       : `https://maps.googleapis.com/maps/api/place/nearbysearch/json`;
-
     try {
       const response = await firstValueFrom(
         this.httpService.get<{ results: GooglePlace[]; status: string; error_message?: string }>(
@@ -102,14 +100,11 @@ export class DiscoverService {
           },
         ),
       );
-
       if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
         throw new Error(response.data.error_message || response.data.status);
       }
-
       const results = response.data.results || [];
       results.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
-
       return results.slice(0, 20).map(item => ({
         ...this.mapBasicInfo(item, lat, lng),
         wikipediaUrl: null,
@@ -125,7 +120,7 @@ export class DiscoverService {
 
   async getPOIDetails(
     place_id: string,
-    name: string,
+    name: string | undefined,
     lat: number,
     lng: number,
   ): Promise<EnrichedWikiData> {
@@ -134,12 +129,15 @@ export class DiscoverService {
       return this.wikiCache.get(cacheKey)!;
     }
 
-    const [wikiEN, voyEN, googleDetails] = await Promise.all([
-      this.fetchWikipedia('en.wikipedia.org', name, lat, lng),
-      this.fetchWikivoyage('en.wikivoyage.org', lat, lng),
-      this.fetchPlaceDetails(place_id),
-    ]);
+    const googleDetails = await this.fetchPlaceDetails(place_id);
+    const resolvedName = name || googleDetails?.name || '';
 
+    const [wikiEN, voyEN] = await Promise.all([
+      resolvedName
+        ? this.fetchWikipedia('en.wikipedia.org', resolvedName, lat, lng)
+        : Promise.resolve(null),
+      this.fetchWikivoyage('en.wikivoyage.org', lat, lng),
+    ]);
     const enriched: EnrichedWikiData = {
       description: voyEN?.summary || wikiEN?.summary || null,
       wikipediaUrl: wikiEN?.url || null,
@@ -148,7 +146,6 @@ export class DiscoverService {
       phoneNumber:
         googleDetails?.formatted_phone_number || googleDetails?.international_phone_number || null,
     };
-
     this.wikiCache.set(cacheKey, enriched);
     return enriched;
   }
@@ -178,6 +175,7 @@ export class DiscoverService {
       const response = await firstValueFrom(
         this.httpService.get<{
           result: {
+            name?: string;
             website?: string;
             formatted_phone_number?: string;
             international_phone_number?: string;
@@ -185,7 +183,7 @@ export class DiscoverService {
         }>(`https://maps.googleapis.com/maps/api/place/details/json`, {
           params: {
             place_id: placeId,
-            fields: 'website,formatted_phone_number,international_phone_number',
+            fields: 'name,website,formatted_phone_number,international_phone_number',
             key: this.googleApiKey,
           },
         }),
@@ -205,8 +203,6 @@ export class DiscoverService {
     try {
       const apiUrl = `https://${domain}/w/api.php`;
       const headers = { 'User-Agent': 'TrippierBot/1.0' };
-
-      // Pass 1: Geographic search (1km)
       const geoResponse = await firstValueFrom(
         this.httpService.get<{
           query?: { geosearch: Array<{ title: string; pageid: number; dist: number }> };
@@ -223,8 +219,6 @@ export class DiscoverService {
           },
         }),
       );
-
-      // Pass 2: Title search (opensearch)
       const searchResponse = await firstValueFrom(
         this.httpService.get<[string, string[]]>(apiUrl, {
           headers,
@@ -238,26 +232,17 @@ export class DiscoverService {
           },
         }),
       );
-
       const geoResults = geoResponse.data.query?.geosearch || [];
       const searchResults = searchResponse.data[1] || [];
-
-      // Scoring
       const scores = new Map<string, { pageid?: number; score: number }>();
       const normalizedTitle = title.toLowerCase();
-
-      // Score geo results
       geoResults.forEach((res, index) => {
-        const score = 100 - index * 5; // Base points for being nearby
+        const score = 100 - index * 5;
         scores.set(res.title, { pageid: res.pageid, score });
       });
-
-      // Score search results
       searchResults.forEach((resTitle, index) => {
         const existing = scores.get(resTitle);
         let score = (existing?.score || 0) + (50 - index * 10);
-
-        // Bonus for name matching
         const resTitleLower = resTitle.toLowerCase();
         if (resTitleLower === normalizedTitle) {
           score += 150;
@@ -267,26 +252,19 @@ export class DiscoverService {
         ) {
           score += 70;
         }
-
-        // Cross-match bonus
         if (existing) {
           score += 200;
         }
-
         scores.set(resTitle, { pageid: existing?.pageid, score });
       });
-
-      // Find best match
       let bestTitle: string | null = null;
       let maxScore = -1;
-
       for (const [resTitle, data] of scores.entries()) {
         if (data.score > maxScore) {
           maxScore = data.score;
           bestTitle = resTitle;
         }
       }
-
       if (bestTitle && maxScore > 30) {
         const bestData = scores.get(bestTitle)!;
         const detailsResponse = await firstValueFrom(
@@ -306,10 +284,8 @@ export class DiscoverService {
             },
           }),
         );
-
         const pagesData = detailsResponse.data.query.pages;
         const pageData = pagesData[Object.keys(pagesData)[0]];
-
         if (pageData && !('missing' in pageData)) {
           return {
             url: pageData.fullurl,
@@ -331,8 +307,6 @@ export class DiscoverService {
     try {
       const apiUrl = `https://${domain}/w/api.php`;
       const headers = { 'User-Agent': 'TrippierBot/1.0' };
-
-      // Purely geographic for Wikivoyage (Zone article)
       const geoResponse = await firstValueFrom(
         this.httpService.get<{ query?: { geosearch: Array<{ title: string; pageid: number }> } }>(
           apiUrl,
@@ -350,9 +324,7 @@ export class DiscoverService {
           },
         ),
       );
-
       const page = geoResponse.data.query?.geosearch?.[0];
-
       if (page) {
         const detailsResponse = await firstValueFrom(
           this.httpService.get<{
@@ -371,10 +343,8 @@ export class DiscoverService {
             },
           }),
         );
-
         const pagesData = detailsResponse.data.query.pages;
         const pageData = pagesData[Object.keys(pagesData)[0]];
-
         if (pageData && !('missing' in pageData)) {
           return {
             url: pageData.fullurl,

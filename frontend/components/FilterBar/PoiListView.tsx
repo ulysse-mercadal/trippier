@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { POI } from '../../lib/types';
+import { POI, Map } from '../../lib/types';
 import PoiCard from './PoiCard';
 
 interface PoiListViewProps {
@@ -24,6 +24,8 @@ interface PoiListViewProps {
   isSmallScreen?: boolean;
   onZoom?: (poi: POI) => void;
   focusedPoi?: POI | null;
+  onMapsChange?: () => void;
+  maps?: Map[];
 }
 
 export default function PoiListView({
@@ -36,6 +38,8 @@ export default function PoiListView({
   isSmallScreen,
   onZoom,
   focusedPoi,
+  onMapsChange,
+  maps = [],
 }: PoiListViewProps) {
   if (!isExpanded && !isSmallScreen) {
     return null;
@@ -47,7 +51,8 @@ export default function PoiListView({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col overflow-y-auto scrollbar-hide pb-24">
+      className="flex-1 flex flex-col overflow-y-auto scrollbar-hide pb-24"
+      onPointerDown={e => e.stopPropagation()}>
       <div className="px-6 pt-4 pb-2">
         <h2 className="text-2xl text-black font-bold">Explore</h2>
       </div>
@@ -75,6 +80,8 @@ export default function PoiListView({
                         onPoiSelect={onPoiSelect}
                         onZoom={onZoom}
                         isHighlighted={focusedPoi?.place_id === poi.place_id}
+                        onMapsChange={onMapsChange}
+                        maps={maps}
                       />
                     ))
                   : !loading && (
@@ -104,6 +111,8 @@ export default function PoiListView({
                   onPoiSelect={onPoiSelect}
                   onZoom={onZoom}
                   isHighlighted={focusedPoi?.place_id === poi.place_id}
+                  onMapsChange={onMapsChange}
+                  maps={maps}
                 />
               ))
             ) : loading ? (

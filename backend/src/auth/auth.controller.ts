@@ -18,6 +18,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthGuard } from '@nestjs/passport';
@@ -34,7 +35,10 @@ interface RequestWithUser extends Request {
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private usersService: UsersService,
+  ) {}
 
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'Return JWT access token and user info.' })
@@ -59,7 +63,8 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
-  getProfile(@Request() req: RequestWithUser) {
-    return req.user;
+  async getProfile(@Request() req: RequestWithUser) {
+    const user = await this.usersService.findOne(req.user.id);
+    return user;
   }
 }

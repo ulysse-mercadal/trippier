@@ -12,9 +12,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion, useAnimation, PanInfo } from 'framer-motion';
 import clsx from 'clsx';
-import { POI } from '../lib/types';
+import { POI, Map } from '../lib/types';
 import PoiListView from './FilterBar/PoiListView';
 import PoiDetailView from './FilterBar/PoiDetailView';
+import MapListView from './FilterBar/MapListView';
+import MapDetailView from './FilterBar/MapDetailView';
 import SearchInput from './FilterBar/SearchInput';
 
 interface FilterBarProps {
@@ -30,6 +32,11 @@ interface FilterBarProps {
   selectedPoi?: POI | null;
   onZoom?: (poi: POI) => void;
   focusedPoi?: POI | null;
+  maps?: Map[];
+  onDeleteMap?: (id: number) => void;
+  onUpdateMap?: (id: number, data: Partial<Map>) => void;
+  onMapCreated?: () => void;
+  onMapsRefresh?: () => void;
 }
 
 export default function FilterBar({
@@ -45,11 +52,20 @@ export default function FilterBar({
   selectedPoi,
   onZoom,
   focusedPoi,
+  maps = [],
+  onDeleteMap,
+  onUpdateMap,
+  onMapCreated,
+  onMapsRefresh,
 }: FilterBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
   const controls = useAnimation();
   const [mobileState, setMobileState] = useState<'hidden' | 'low' | 'medium' | 'high'>('hidden');
+  const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
+  const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
+
+  const selectedMap = maps.find(m => m.id === selectedMapId) || null;
 
   useEffect(() => {
     if (isExpanded) {
@@ -58,19 +74,34 @@ export default function FilterBar({
   }, [isExpanded]);
 
   useEffect(() => {
+    if (inputValue.trim() !== '' && viewMode === 'maps') {
+      const timer = setTimeout(() => setViewMode('search'), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [inputValue, viewMode]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
-      if (onSearch) {
+      if (onSearch && viewMode === 'search') {
         onSearch(inputValue);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [inputValue, onSearch]);
+  }, [inputValue, onSearch, viewMode]);
+
+  const handleMyMapsClick = () => {
+    setViewMode('maps');
+    setSelectedMapId(null);
+    onToggle(true);
+    if (isSmallScreen) {
+      setMobileState('medium');
+    }
+  };
 
   useEffect(() => {
     if (!isSmallScreen) {
       return;
     }
-
     if (selectedPoi) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMobileState('high');
@@ -103,6 +134,8 @@ export default function FilterBar({
     if (isSmallScreen) {
       setMobileState('hidden');
     }
+    setViewMode('search');
+    setSelectedMapId(null);
   };
 
   const handleZoom = (poi: POI) => {
@@ -112,6 +145,14 @@ export default function FilterBar({
     if (isSmallScreen) {
       setMobileState('low');
     }
+  };
+
+  const handleMapClickFromPoi = (mapId: number) => {
+    if (onPoiSelect) {
+      onPoiSelect(null);
+    }
+    setViewMode('maps');
+    setSelectedMapId(mapId);
   };
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
@@ -139,7 +180,6 @@ export default function FilterBar({
         nextState = 'high';
       }
     }
-
     setMobileState(nextState);
     if (nextState === 'hidden') {
       collapseSearch();
@@ -188,7 +228,35 @@ export default function FilterBar({
         <div
           className={clsx('flex-1 flex flex-col min-h-0', !isSmallScreen && selectedPoi && 'pt-6')}>
           <AnimatePresence mode="wait">
-            {!selectedPoi ? (
+            {selectedPoi ? (
+              <PoiDetailView
+                selectedPoi={selectedPoi}
+                onPoiSelect={onPoiSelect}
+                loading={loading}
+                onSearch={onSearch}
+                setInputValue={setInputValue}
+                maps={maps}
+                onMapClick={handleMapClickFromPoi}
+              />
+            ) : viewMode === 'maps' ? (
+              selectedMap ? (
+                <MapDetailView
+                  map={selectedMap}
+                  onBack={() => setSelectedMapId(null)}
+                  onPoiSelect={onPoiSelect}
+                  onZoom={handleZoom}
+                  onMapsChange={onMapsRefresh}
+                />
+              ) : (
+                <MapListView
+                  maps={maps}
+                  onDelete={onDeleteMap || (() => {})}
+                  onUpdate={onUpdateMap || (() => {})}
+                  onMapCreated={onMapCreated || (() => {})}
+                  onClick={m => setSelectedMapId(m.id)}
+                />
+              )
+            ) : (
               <PoiListView
                 isExpanded={isExpanded}
                 searchQuery={searchQuery}
@@ -199,20 +267,13 @@ export default function FilterBar({
                 isSmallScreen={isSmallScreen}
                 onZoom={handleZoom}
                 focusedPoi={focusedPoi}
-              />
-            ) : (
-              <PoiDetailView
-                selectedPoi={selectedPoi}
-                onPoiSelect={onPoiSelect}
-                loading={loading}
-                onSearch={onSearch}
-                setInputValue={setInputValue}
+                onMapsChange={onMapsRefresh}
+                maps={maps}
               />
             )}
           </AnimatePresence>
         </div>
       </motion.div>
-
       <AnimatePresence>
         {!selectedPoi && (
           <SearchInput
@@ -220,10 +281,16 @@ export default function FilterBar({
             loading={loading}
             inputValue={inputValue}
             setInputValue={setInputValue}
-            onToggle={onToggle}
+            onToggle={expanded => {
+              onToggle(expanded);
+              if (expanded) {
+                setViewMode('search');
+              }
+            }}
             inputRef={inputRef}
             isSmallScreen={isSmallScreen}
             collapseSearch={collapseSearch}
+            onMyMapsClick={handleMyMapsClick}
           />
         )}
       </AnimatePresence>

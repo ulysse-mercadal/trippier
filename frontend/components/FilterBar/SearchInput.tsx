@@ -13,6 +13,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoSearch, IoArrowBack } from 'react-icons/io5';
 import clsx from 'clsx';
+import ProfileMedal from '../ProfileMedal';
 
 interface SearchInputProps {
   isExpanded: boolean;
@@ -23,6 +24,7 @@ interface SearchInputProps {
   inputRef: React.RefObject<HTMLInputElement | null>;
   isSmallScreen: boolean;
   collapseSearch: () => void;
+  onMyMapsClick?: () => void;
 }
 
 export default function SearchInput({
@@ -34,6 +36,7 @@ export default function SearchInput({
   inputRef,
   isSmallScreen,
   collapseSearch,
+  onMyMapsClick,
 }: SearchInputProps) {
   const toggleSearch = () => {
     if (!isExpanded) {
@@ -49,7 +52,7 @@ export default function SearchInput({
       exit={{ opacity: 0, y: -20 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className={clsx(
-        'fixed z-20 bg-white border-2 flex flex-col overflow-hidden transition-colors duration-300',
+        'fixed z-20 bg-white border-2 flex flex-col transition-colors duration-300',
         isExpanded ? 'border-black' : 'border-transparent',
         !isExpanded && 'cursor-pointer shadow-lg',
       )}
@@ -61,7 +64,7 @@ export default function SearchInput({
         left: 20,
       }}
       onClick={!isExpanded ? toggleSearch : undefined}>
-      <div className="flex items-center min-h-12 px-4 relative bg-white">
+      <div className="flex items-center min-h-12 px-4 relative">
         <AnimatePresence>
           {isExpanded && (
             <motion.button
@@ -108,12 +111,18 @@ export default function SearchInput({
           className={clsx(
             'flex-1 bg-transparent border-none outline-none text-gray-800 text-base placeholder-gray-500 h-full',
             !isExpanded && 'pointer-events-none',
+            isSmallScreen && 'pr-12',
           )}
           placeholder="Discover new places"
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           disabled={!isExpanded}
         />
+        <div
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 -mt-0.5 -mr-0.5"
+          onClick={e => e.stopPropagation()}>
+          <ProfileMedal onMyMapsClick={onMyMapsClick} />
+        </div>
       </div>
     </motion.div>
   );

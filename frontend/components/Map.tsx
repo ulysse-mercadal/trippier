@@ -10,7 +10,8 @@
 'use client';
 
 import React, { useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, OverlayView } from '@react-google-maps/api';
+import { POI } from '../lib/types';
 
 const containerStyle = {
   width: '100%',
@@ -36,9 +37,11 @@ const mapStyle = [
 interface MapProps {
   onCenterChanged?: (lat: number, lng: number) => void;
   targetLocation?: { lat: number; lng: number } | null;
+  mapPois?: { poi: POI; mapIcon: string }[];
+  onPoiClick?: (poi: POI) => void;
 }
 
-export default function Map({ onCenterChanged, targetLocation }: MapProps) {
+export default function Map({ onCenterChanged, targetLocation, mapPois, onPoiClick }: MapProps) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
@@ -85,7 +88,6 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
       }
     }
   }, [onCenterChanged]);
-
   if (!isLoaded) {
     return (
       <div className="w-full h-full bg-[#212121] flex items-center justify-center text-white">
@@ -110,6 +112,7 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
         streetViewControl: false,
         fullscreenControl: false,
         gestureHandling: 'greedy',
+        clickableIcons: false,
       }}>
       {targetLocation && (
         <MarkerF
@@ -124,6 +127,41 @@ export default function Map({ onCenterChanged, targetLocation }: MapProps) {
           }}
         />
       )}
+      {mapPois?.map((item, index) => {
+        const id = item.poi.place_id || item.poi.id;
+        if (!id) {
+          return null;
+        }
+        return (
+          <OverlayView
+            key={`${id}-${index}`}
+            position={{
+              lat: typeof item.poi.lat === 'string' ? parseFloat(item.poi.lat) : item.poi.lat,
+              lng: typeof item.poi.lng === 'string' ? parseFloat(item.poi.lng) : item.poi.lng,
+            }}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}>
+            <div
+              onClick={e => {
+                e.stopPropagation();
+                onPoiClick?.(item.poi);
+              }}
+              className="absolute transform -translate-x-1/2 -translate-y-full cursor-pointer group hover:z-50"
+              style={{ width: '56px', height: '56px' }}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="white"
+                stroke="#e5e7eb"
+                strokeWidth="1"
+                className="w-full h-full drop-shadow-md group-hover:scale-110 transition-transform origin-bottom">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+              </svg>
+              <div className="absolute top-0 left-0 w-full h-[75%] flex items-center justify-center text-xl group-hover:scale-110 transition-transform origin-bottom pointer-events-none">
+                {item.mapIcon}
+              </div>
+            </div>
+          </OverlayView>
+        );
+      })}
     </GoogleMap>
   );
 }

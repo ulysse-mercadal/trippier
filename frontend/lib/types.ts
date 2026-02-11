@@ -8,6 +8,7 @@
 // **************************************************************************
 
 export interface POI {
+  id?: string;
   place_id: string;
   name: string;
   type: string;
@@ -23,4 +24,16 @@ export interface POI {
   officialWebsite?: string | null;
   phoneNumber?: string | null;
   description?: string | null;
+}
+
+export interface Map {
+  id: number;
+  title: string;
+  icon: string | null;
+  description: string | null;
+  isPublic: boolean;
+  isVisible: boolean;
+  createdAt: string;
+  updatedAt: string;
+  pois?: POI[];
 }
