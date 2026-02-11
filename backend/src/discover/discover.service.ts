@@ -118,6 +118,184 @@ export class DiscoverService {
     }
   }
 
+  async smartDiscovery(city: string, weightsStr?: string): Promise<ProcessedPOI[]> {
+    try {
+      const weights = this.parseWeights(weightsStr);
+      const pageData = await this.fetchWikivoyageWikitext(city);
+      if (!pageData) {
+        throw new HttpException('City not found on Wikivoyage', HttpStatus.NOT_FOUND);
+      }
+
+      const { wikitext, title, lat: cityLat, lon: cityLon } = pageData;
+      const listings = this.parseWikivoyageListings(wikitext, title);
+
+      const processedPOIs: ProcessedPOI[] = listings.map(listing => {
+        const poiLat = listing.lat || cityLat || 0;
+        const poiLng = listing.lng || cityLon || 0;
+        
+        return {
+          place_id: `wv-${Buffer.from(listing.name).toString('base64')}`,
+          name: listing.name,
+          type: listing.type,
+          rating: 0,
+          user_ratings_total: 0,
+          distance: cityLat && cityLon ? this.calculateDistance(cityLat, cityLon, poiLat, poiLng) : 0,
+          lat: poiLat,
+          lng: poiLng,
+          address: listing.address,
+          thumbnail: null,
+          wikipediaUrl: null,
+          wikivoyageUrl: `https://en.wikivoyage.org/wiki/${encodeURIComponent(title)}#${encodeURIComponent(listing.name.replace(/ /g, '_'))}`,
+          officialWebsite: listing.url || null,
+          phoneNumber: listing.phone || null,
+          description: listing.content || null,
+        };
+      });
+
+      // Scoring and sorting
+      const scoredPOIs = processedPOIs.map(poi => {
+        let score = 0;
+        const nameLower = poi.name.toLowerCase();
+        const descLower = (poi.description || '').toLowerCase();
+        const typeLower = poi.type.toLowerCase();
+
+        for (const [category, weight] of Object.entries(weights)) {
+          const catLower = category.toLowerCase();
+
+          // direct type match (See, Do, Buy, Eat, Drink, Sleep)
+          if (typeLower === catLower) {
+            score += weight * 2;
+          }
+
+          // keyword match in name or description
+          if (nameLower.includes(catLower) || descLower.includes(catLower)) {
+            score += weight;
+          }
+          
+          // Enhanced mapping for common user-friendly terms to Wikivoyage types/keywords
+          if (catLower === 'shopping' && (typeLower === 'buy' || descLower.includes('shop') || descLower.includes('mall'))) score += weight;
+          if (catLower === 'nature' && (descLower.includes('park') || descLower.includes('nature') || descLower.includes('garden') || descLower.includes('forest'))) score += weight;
+          if (catLower === 'culture' && (typeLower === 'see' || nameLower.includes('museum') || descLower.includes('museum') || descLower.includes('gallery') || descLower.includes('art'))) score += weight;
+          if (catLower === 'food' && (typeLower === 'eat' || descLower.includes('restaurant') || descLower.includes('cafe'))) score += weight;
+          if (catLower === 'nightlife' && (typeLower === 'drink' || descLower.includes('bar') || descLower.includes('club') || descLower.includes('pub'))) score += weight;
+          if (catLower === 'activities' && typeLower === 'do') score += weight;
+          if (catLower === 'monument' && (nameLower.includes('monument') || nameLower.includes('statue') || descLower.includes('historic'))) score += weight;
+        }
+        return { poi, score };
+      });
+
+      scoredPOIs.sort((a, b) => b.score - a.score);
+
+      return scoredPOIs.map(s => s.poi);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Failed to perform smart discovery: ' + error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  private parseWeights(weightsStr?: string): Record<string, number> {
+    const weights: Record<string, number> = {};
+    if (!weightsStr) return weights;
+
+    const parts = weightsStr.split(',');
+    for (const part of parts) {
+      const [key, value] = part.split(':');
+      if (key && value) {
+        weights[key.trim()] = parseFloat(value.trim()) || 0;
+      }
+    }
+    return weights;
+  }
+
+  private async fetchWikivoyageWikitext(city: string): Promise<{ wikitext: string; title: string; lat?: number; lon?: number } | null> {
+    const apiUrl = 'https://en.wikivoyage.org/w/api.php';
+    const headers = { 'User-Agent': 'TrippierBot/1.0' };
+
+    try {
+      // First, find the page title and basic info
+      const searchRes = await firstValueFrom(
+        this.httpService.get(apiUrl, {
+          headers,
+          params: {
+            action: 'query',
+            titles: city,
+            prop: 'revisions|coordinates',
+            rvprop: 'content',
+            format: 'json',
+            redirects: 1,
+            origin: '*',
+          },
+        }),
+      );
+
+      const pages = searchRes.data.query?.pages;
+      if (!pages) return null;
+
+      const pageId = Object.keys(pages)[0];
+      if (pageId === '-1') return null;
+
+      const page = pages[pageId];
+      const wikitext = page.revisions?.[0]?.['*'];
+      const title = page.title;
+      const coords = page.coordinates?.[0];
+
+      return {
+        wikitext,
+        title,
+        lat: coords?.lat,
+        lon: coords?.lon,
+      };
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  private parseWikivoyageListings(wikitext: string, pageTitle: string): any[] {
+    const listings: any[] = [];
+    // Regex to match {{see|...}}, {{do|...}}, etc.
+    // This is a simplified regex, real wikitext can be complex with nested templates
+    const listingRegex = /\{\{(see|do|buy|eat|drink|sleep|listing)\s*\|([^}]+)\}\}/gi;
+    let match;
+
+    while ((match = listingRegex.exec(wikitext)) !== null) {
+      const type = match[1];
+      const paramsStr = match[2];
+      const params: Record<string, string> = {};
+
+      // Parse parameters: name=Value | lat=...
+      const paramParts = paramsStr.split('|');
+      for (const part of paramParts) {
+        const eqIndex = part.indexOf('=');
+        if (eqIndex !== -1) {
+          const key = part.substring(0, eqIndex).trim().toLowerCase();
+          const value = part.substring(eqIndex + 1).trim();
+          params[key] = value;
+        } else if (part.trim()) {
+          // Some templates have unnamed parameters, usually name is the first one
+          if (!params['name']) {
+            params['name'] = part.trim();
+          }
+        }
+      }
+
+      if (params['name']) {
+        listings.push({
+          type: type.charAt(0).toUpperCase() + type.slice(1),
+          name: params['name'],
+          alt: params['alt'],
+          url: params['url'],
+          address: params['address'],
+          lat: params['lat'] ? parseFloat(params['lat']) : null,
+          lng: (params['long'] || params['lon']) ? parseFloat(params['long'] || params['lon']) : null,
+          phone: params['phone'],
+          content: params['content'] || params['description'],
+        });
+      }
+    }
+
+    return listings;
+  }
+
   async getPOIDetails(
     place_id: string,
     name: string | undefined,

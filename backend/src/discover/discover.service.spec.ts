@@ -155,4 +155,47 @@ describe('DiscoverService', () => {
     expect(pois[0].wikipediaUrl).toBeNull();
     expect(mockHttpService.get).toHaveBeenCalled();
   });
+
+  it('should perform smart discovery from Wikivoyage', async () => {
+    const wikitext = `
+      == See ==
+      * {{see|name=Eiffel Tower|lat=48.8583|long=2.2945|content=A tall iron tower.}}
+      * {{see|name=Louvre Museum|lat=48.8606|long=2.3376|content=A famous museum.}}
+      == Buy ==
+      * {{buy|name=Galeries Lafayette|lat=48.8737|long=2.3322|content=A big department store.}}
+    `;
+
+    const wikivoyageQueryResponse = {
+      data: {
+        query: {
+          pages: {
+            '1': {
+              pageid: 1,
+              title: 'Paris',
+              revisions: [{ '*': wikitext }],
+              coordinates: [{ lat: 48.8566, lon: 2.3522 }],
+            },
+          },
+        },
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: { headers: {} as any },
+    } as AxiosResponse;
+
+    mockHttpService.get.mockImplementation((url: string, config?: AxiosRequestConfig) => {
+      const params: Record<string, any> = config?.params || {};
+      if (url.includes('en.wikivoyage.org/w/api.php') && params.action === 'query' && params.titles === 'Paris') {
+        return of(wikivoyageQueryResponse);
+      }
+      return of({ data: {} });
+    });
+
+    const results = await service.smartDiscovery('Paris', 'museum:10');
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].name).toBe('Louvre Museum'); // Should be first because of weight on museum
+    expect(results.find(r => r.name === 'Galeries Lafayette')).toBeDefined();
+  });
 });
