@@ -84,8 +84,12 @@ export default function MapComponent({
         <NavigationControl position="bottom-right" showCompass={false} />
         {hoveredPoi && (
           <Marker
-            longitude={typeof hoveredPoi.lng === 'string' ? parseFloat(hoveredPoi.lng) : hoveredPoi.lng}
-            latitude={typeof hoveredPoi.lat === 'string' ? parseFloat(hoveredPoi.lat) : hoveredPoi.lat}
+            longitude={
+              typeof hoveredPoi.lng === 'string' ? parseFloat(hoveredPoi.lng) : hoveredPoi.lng
+            }
+            latitude={
+              typeof hoveredPoi.lat === 'string' ? parseFloat(hoveredPoi.lat) : hoveredPoi.lat
+            }
             anchor="bottom"
             style={{ zIndex: 100 }}>
             <div className="relative w-14 h-14 cursor-pointer">

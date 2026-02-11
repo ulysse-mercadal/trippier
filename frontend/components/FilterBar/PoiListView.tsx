@@ -14,13 +14,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { POI, Map } from '../../lib/types';
 import PoiCard from './PoiCard';
 import clsx from 'clsx';
-import { 
-  MdMuseum, 
-  MdRestaurant, 
-  MdPark, 
-  MdLocalBar, 
-  MdShoppingBag, 
-  MdDirectionsRun 
+import {
+  MdMuseum,
+  MdRestaurant,
+  MdPark,
+  MdLocalBar,
+  MdShoppingBag,
+  MdDirectionsRun,
 } from 'react-icons/md';
 
 interface PoiListViewProps {
@@ -69,13 +69,17 @@ export default function PoiListView({
     const map: Record<string, number> = {};
     weights.split(',').forEach(w => {
       const [k, v] = w.split(':');
-      if (k) map[k] = parseFloat(v) || 0;
+      if (k) {
+        map[k] = parseFloat(v) || 0;
+      }
     });
     return map;
   }, [weights]);
 
   const toggleCategory = (id: string) => {
-    if (!onWeightsChange) return;
+    if (!onWeightsChange) {
+      return;
+    }
     const newWeights = { ...currentWeights };
     if (newWeights[id]) {
       delete newWeights[id];
@@ -100,7 +104,6 @@ export default function PoiListView({
       exit={{ opacity: 0 }}
       className="flex-1 flex flex-col min-h-0"
       onPointerDown={e => e.stopPropagation()}>
-      
       {/* Sticky Header and Categories */}
       <div className="sticky top-0 bg-white z-10 pt-4 pb-2 border-b border-gray-100">
         <div className="px-6 mb-2">
@@ -144,17 +147,18 @@ export default function PoiListView({
                 <div className="grid gap-3">
                   {searchResults.length > 0
                     ? searchResults.map((poi, i) => (
-                                        <PoiCard
-                                          key={poi.place_id || i}
-                                          poi={poi}
-                                          index={i}
-                                          onPoiSelect={onPoiSelect}
-                                          onZoom={onZoom}
-                                          onHover={onHover}
-                                          isHighlighted={focusedPoi?.place_id === poi.place_id}
-                                          onMapsChange={onMapsChange}
-                                          maps={maps}
-                                        />                      ))
+                        <PoiCard
+                          key={poi.place_id || i}
+                          poi={poi}
+                          index={i}
+                          onPoiSelect={onPoiSelect}
+                          onZoom={onZoom}
+                          onHover={onHover}
+                          isHighlighted={focusedPoi?.place_id === poi.place_id}
+                          onMapsChange={onMapsChange}
+                          maps={maps}
+                        />
+                      ))
                     : !loading && (
                         <p className="text-sm text-gray-400">
                           No popular results found for &quot;{searchQuery}&quot;
@@ -175,17 +179,18 @@ export default function PoiListView({
             <div className="grid gap-3">
               {nearbyPois.length > 0 ? (
                 nearbyPois.map((poi, i) => (
-                                  <PoiCard
-                                    key={poi.place_id || i}
-                                    poi={poi}
-                                    index={i}
-                                    onPoiSelect={onPoiSelect}
-                                    onZoom={onZoom}
-                                    onHover={onHover}
-                                    isHighlighted={focusedPoi?.place_id === poi.place_id}
-                                    onMapsChange={onMapsChange}
-                                    maps={maps}
-                                  />                ))
+                  <PoiCard
+                    key={poi.place_id || i}
+                    poi={poi}
+                    index={i}
+                    onPoiSelect={onPoiSelect}
+                    onZoom={onZoom}
+                    onHover={onHover}
+                    isHighlighted={focusedPoi?.place_id === poi.place_id}
+                    onMapsChange={onMapsChange}
+                    maps={maps}
+                  />
+                ))
               ) : loading ? (
                 <div className="flex flex-col gap-3">
                   {[1, 2, 3].map(i => (

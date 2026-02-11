@@ -141,23 +141,26 @@ export default function DiscoverPage() {
     }
   }, []);
 
-  const fetchSearch = useCallback(async (lat: number, lng: number, q: string, currentWeights: string) => {
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 50, q, weights: currentWeights },
-      });
-      setSearchResults(response.data);
-    } catch (error) {
-      console.error('Failed to fetch search results:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchSearch = useCallback(
+    async (lat: number, lng: number, q: string, currentWeights: string) => {
+      if (!q) {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        setLoading(true);
+        const response = await client.get('/discover/nearby', {
+          params: { lat, lng, radius: 50, q, weights: currentWeights },
+        });
+        setSearchResults(response.data);
+      } catch (error) {
+        console.error('Failed to fetch search results:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   const handleSearch = useCallback(
     (text: string) => {
@@ -198,13 +201,16 @@ export default function DiscoverPage() {
     [fetchNearby, fetchSearch, searchQuery, weights],
   );
 
-  const handleWeightsChange = useCallback((newWeights: string) => {
-    setWeights(newWeights);
-    fetchNearby(lastCoords.current.lat, lastCoords.current.lng, newWeights);
-    if (searchQuery) {
-      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, searchQuery, newWeights);
-    }
-  }, [fetchNearby, fetchSearch, searchQuery]);
+  const handleWeightsChange = useCallback(
+    (newWeights: string) => {
+      setWeights(newWeights);
+      fetchNearby(lastCoords.current.lat, lastCoords.current.lng, newWeights);
+      if (searchQuery) {
+        fetchSearch(lastCoords.current.lat, lastCoords.current.lng, searchQuery, newWeights);
+      }
+    },
+    [fetchNearby, fetchSearch, searchQuery],
+  );
 
   const handlePoiSelect = useCallback(async (poi: POI | null) => {
     setSelectedPoi(poi);
