@@ -80,7 +80,7 @@ describe('DiscoverService', () => {
     } as AxiosResponse;
 
     mockHttpService.get.mockImplementation((url: string, config?: AxiosRequestConfig) => {
-      const params: Record<string, any> = config?.params || {};
+      const _params: Record<string, any> = config?.params || {};
 
       if (url.includes('findNearbyPlaceNameJSON')) {
         return of(cityNameResponse);
@@ -129,7 +129,11 @@ describe('DiscoverService', () => {
 
     mockHttpService.get.mockImplementation((url: string, config?: AxiosRequestConfig) => {
       const params: Record<string, any> = config?.params || {};
-      if (url.includes('en.wikivoyage.org/w/api.php') && params.action === 'query' && params.titles === 'Paris') {
+      if (
+        url.includes('en.wikivoyage.org/w/api.php') &&
+        params.action === 'query' &&
+        params.titles === 'Paris'
+      ) {
         return of(wikivoyageQueryResponse);
       }
       return of({ data: {} });

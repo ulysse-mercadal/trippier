@@ -25,7 +25,13 @@ export class DiscoverController {
   @Get('nearby')
   @UsePipes(new ValidationPipe({ transform: true }))
   async getNearby(@Query() query: GetNearbyDto) {
-    return this.discoverService.findNearbyPOIs(query.lat, query.lng, query.radius, query.q, query.weights);
+    return this.discoverService.findNearbyPOIs(
+      query.lat,
+      query.lng,
+      query.radius,
+      query.q,
+      query.weights,
+    );
   }
 
   @ApiOperation({ summary: 'Smart discovery from Wikivoyage' })
