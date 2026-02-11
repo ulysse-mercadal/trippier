@@ -36,13 +36,11 @@ services:
       target: builder
       args:
         API_URL: ${API_URL}
-        GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
         MAPTILER_API_KEY: ${MAPTILER_API_KEY}
         MAPTILER_MAP_ID: ${MAPTILER_MAP_ID}
     restart: always
     environment:
       API_URL: ${API_URL}
-      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
       MAPTILER_API_KEY: ${MAPTILER_API_KEY}
       MAPTILER_MAP_ID: ${MAPTILER_MAP_ID}
     ports:

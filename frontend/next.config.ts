@@ -29,7 +29,6 @@ if (fs.existsSync(envPath)) {
 const nextConfig: NextConfig = {
   env: {
     API_URL: process.env.API_URL,
-    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
     MAPTILER_API_KEY: process.env.MAPTILER_API_KEY,
     MAPTILER_MAP_ID: process.env.MAPTILER_MAP_ID,
   },

@@ -22,14 +22,13 @@ Copy the `.env.example` file to `.env` and fill in the values:
 cp .env.example .env
 ```
 
-You will need a **Google Maps API Key** with the following APIs enabled:
-- Maps SDK for Android
-- Maps SDK for iOS
-- Maps JavaScript API
-- Places API
+You will need:
+- **MapTiler API Key**: For map rendering ([maptiler.com](https://www.maptiler.com/))
+- **GeoNames Username**: For point of interest discovery ([geonames.org](https://www.geonames.org/))
 
-Add your key to the `.env` file:
-`GOOGLE_MAPS_API_KEY=your_key_here`
+Add these to your `.env` file:
+`MAPTILER_API_KEY=your_key_here`
+`GEONAMES_USERNAME=your_username_here`
 
 ### 2. Launch the Stack (DB + API + Web)
 
