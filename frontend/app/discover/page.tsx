@@ -34,8 +34,10 @@ export default function DiscoverPage() {
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [weights, setWeights] = useState('culture:5,nature:5,food:5');
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
+  const [hoveredPoi, setHoveredPoi] = useState<POI | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
   const lastFetchedCoords = useRef<{ lat: number; lng: number } | null>(null);
@@ -125,11 +127,11 @@ export default function DiscoverPage() {
     return [focusedPoi, ...searchResults.filter(p => p.place_id !== focusedPoi.place_id)];
   }, [searchResults, focusedPoi]);
 
-  const fetchNearby = useCallback(async (lat: number, lng: number) => {
+  const fetchNearby = useCallback(async (lat: number, lng: number, currentWeights: string) => {
     try {
       setLoading(true);
       const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 5 },
+        params: { lat, lng, radius: 5, weights: currentWeights },
       });
       setNearbyPois(response.data);
     } catch (error) {
@@ -139,7 +141,7 @@ export default function DiscoverPage() {
     }
   }, []);
 
-  const fetchSearch = useCallback(async (lat: number, lng: number, q: string) => {
+  const fetchSearch = useCallback(async (lat: number, lng: number, q: string, currentWeights: string) => {
     if (!q) {
       setSearchResults([]);
       return;
@@ -147,7 +149,7 @@ export default function DiscoverPage() {
     try {
       setLoading(true);
       const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 50, q },
+        params: { lat, lng, radius: 50, q, weights: currentWeights },
       });
       setSearchResults(response.data);
     } catch (error) {
@@ -160,9 +162,9 @@ export default function DiscoverPage() {
   const handleSearch = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text);
+      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text, weights);
     },
-    [fetchSearch],
+    [fetchSearch, weights],
   );
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -187,14 +189,22 @@ export default function DiscoverPage() {
           0.5;
       if (shouldFetch) {
         lastFetchedCoords.current = { lat, lng };
-        fetchNearby(lat, lng);
+        fetchNearby(lat, lng, weights);
         if (searchQuery) {
-          fetchSearch(lat, lng, searchQuery);
+          fetchSearch(lat, lng, searchQuery, weights);
         }
       }
     },
-    [fetchNearby, fetchSearch, searchQuery],
+    [fetchNearby, fetchSearch, searchQuery, weights],
   );
+
+  const handleWeightsChange = useCallback((newWeights: string) => {
+    setWeights(newWeights);
+    fetchNearby(lastCoords.current.lat, lastCoords.current.lng, newWeights);
+    if (searchQuery) {
+      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, searchQuery, newWeights);
+    }
+  }, [fetchNearby, fetchSearch, searchQuery]);
 
   const handlePoiSelect = useCallback(async (poi: POI | null) => {
     setSelectedPoi(poi);
@@ -219,10 +229,11 @@ export default function DiscoverPage() {
             ? {
                 ...prev,
                 description: response.data.description,
-                wikipediaUrl: response.data.wikipediaUrl,
                 wikivoyageUrl: response.data.wikivoyageUrl,
                 officialWebsite: response.data.website,
                 phoneNumber: response.data.phoneNumber,
+                lat: response.data.lat ?? prev.lat,
+                lng: response.data.lng ?? prev.lng,
               }
             : null,
         );
@@ -240,6 +251,10 @@ export default function DiscoverPage() {
     setFocusedPoi(poi);
   }, []);
 
+  const handleHover = useCallback((poi: POI | null) => {
+    setHoveredPoi(poi);
+  }, []);
+
   return (
     <div className="relative w-full h-full bg-white overflow-hidden">
       <FilterBar
@@ -254,12 +269,15 @@ export default function DiscoverPage() {
         onPoiSelect={handlePoiSelect}
         selectedPoi={selectedPoi}
         onZoom={handleZoomToPoi}
+        onHover={handleHover}
         focusedPoi={focusedPoi}
         maps={maps}
         onDeleteMap={handleDeleteMap}
         onUpdateMap={handleUpdateMap}
         onMapCreated={fetchMaps}
         onMapsRefresh={fetchMaps}
+        weights={weights}
+        onWeightsChange={handleWeightsChange}
       />
       <motion.div
         className="absolute z-10 overflow-hidden shadow-2xl"
@@ -276,6 +294,7 @@ export default function DiscoverPage() {
           onCenterChanged={handleMapMove}
           mapPois={visibleMapPois}
           onPoiClick={handlePoiSelect}
+          hoveredPoi={hoveredPoi}
           targetLocation={
             focusedPoi
               ? {

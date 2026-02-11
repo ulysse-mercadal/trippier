@@ -23,6 +23,7 @@ interface PoiCardProps {
   index: number;
   onPoiSelect?: (poi: POI | null) => void;
   onZoom?: (poi: POI) => void;
+  onHover?: (poi: POI | null) => void;
   isHighlighted?: boolean;
   onMapsChange?: () => void;
   maps?: Map[];
@@ -34,6 +35,7 @@ export default function PoiCard({
   index,
   onPoiSelect,
   onZoom,
+  onHover,
   isHighlighted,
   onMapsChange,
   maps = [],
@@ -62,7 +64,9 @@ export default function PoiCard({
           'p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors cursor-pointer group flex flex-col border',
           isHighlighted ? 'border-black border-4' : 'border-gray-100',
         )}
-        onClick={() => onPoiSelect && onPoiSelect(poi)}>
+        onClick={() => onPoiSelect && onPoiSelect(poi)}
+        onMouseEnter={() => onHover?.(poi)}
+        onMouseLeave={() => onHover?.(null)}>
         <div className="flex items-center justify-between mb-2 overflow-hidden">
           <div className="flex items-center flex-1 min-w-0 mr-2">
             <h3 className="font-bold text-gray-900 text-base group-hover:text-blue-600 transition-colors line-clamp-1">

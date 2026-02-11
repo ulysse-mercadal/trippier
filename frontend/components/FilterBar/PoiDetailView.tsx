@@ -18,7 +18,6 @@ import {
   IoMapOutline,
   IoCheckmarkOutline,
   IoCallOutline,
-  IoReaderOutline,
   IoBookmarkOutline,
 } from 'react-icons/io5';
 import clsx from 'clsx';
@@ -186,16 +185,6 @@ export default function PoiDetailView({
                   </button>
                 )}
               </div>
-            ) : (
-              loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
-            )}
-            {selectedPoi.wikipediaUrl ? (
-              <button
-                onClick={() => selectedPoi.wikipediaUrl && openUrl(selectedPoi.wikipediaUrl)}
-                className="w-full flex items-center justify-between p-4 bg-white border-2 border-black text-black rounded-2xl hover:bg-gray-50 transition-all shadow-sm">
-                <span className="font-bold text-sm">Wikipedia</span>
-                <IoReaderOutline size={18} />
-              </button>
             ) : (
               loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
             )}

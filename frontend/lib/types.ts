@@ -19,7 +19,6 @@ export interface POI {
   lng: number | string;
   address?: string;
   thumbnail: string | null;
-  wikipediaUrl?: string | null;
   wikivoyageUrl?: string | null;
   officialWebsite?: string | null;
   phoneNumber?: string | null;

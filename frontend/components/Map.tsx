@@ -23,6 +23,7 @@ interface MapProps {
   targetLocation?: { lat: number; lng: number } | null;
   mapPois?: { poi: POI; mapIcon: string }[];
   onPoiClick?: (poi: POI) => void;
+  hoveredPoi?: POI | null;
 }
 
 export default function MapComponent({
@@ -30,6 +31,7 @@ export default function MapComponent({
   targetLocation,
   mapPois,
   onPoiClick,
+  hoveredPoi,
 }: MapProps) {
   const mapRef = useRef<MapRef>(null);
   const mapId = process.env.MAPTILER_MAP_ID || 'dataviz-dark';
@@ -80,6 +82,24 @@ export default function MapComponent({
         onMoveEnd={onMoveEnd}
         attributionControl={false}>
         <NavigationControl position="bottom-right" showCompass={false} />
+        {hoveredPoi && (
+          <Marker
+            longitude={typeof hoveredPoi.lng === 'string' ? parseFloat(hoveredPoi.lng) : hoveredPoi.lng}
+            latitude={typeof hoveredPoi.lat === 'string' ? parseFloat(hoveredPoi.lat) : hoveredPoi.lat}
+            anchor="bottom"
+            style={{ zIndex: 100 }}>
+            <div className="relative w-14 h-14 cursor-pointer">
+              <svg
+                viewBox="0 0 24 24"
+                fill="white"
+                stroke="#e5e7eb"
+                strokeWidth="1"
+                className="w-full h-full drop-shadow-md scale-110">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+              </svg>
+            </div>
+          </Marker>
+        )}
         {targetLocation && (
           <Marker longitude={targetLocation.lng} latitude={targetLocation.lat} anchor="center">
             <div
