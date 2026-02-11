@@ -13,8 +13,6 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   IoArrowBack,
-  IoStar,
-  IoPeople,
   IoInformationCircleOutline,
   IoGlobeOutline,
   IoMapOutline,
@@ -119,18 +117,6 @@ export default function PoiDetailView({
         )}>
         {selectedPoi.name}
       </h2>
-      <div className="flex items-center space-x-4 mb-6">
-        <div className="flex items-center text-yellow-500">
-          <IoStar size={16} className="mr-1" />
-          <span className="text-sm font-bold">{selectedPoi.rating}</span>
-        </div>
-        <div className="flex items-center text-gray-400">
-          <IoPeople size={16} className="mr-1" />
-          <span className="text-sm font-medium">
-            {selectedPoi.user_ratings_total?.toLocaleString()} reviews
-          </span>
-        </div>
-      </div>
       <div className="space-y-8">
         {selectedPoi.description ? (
           <section>

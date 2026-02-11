@@ -24,3 +24,15 @@ export interface POI {
   phoneNumber?: string;
   types?: string[];
 }
+
+export interface Map {
+  id: number;
+  title: string;
+  icon: string | null;
+  description: string | null;
+  isPublic: boolean;
+  isVisible: boolean;
+  createdAt: string;
+  updatedAt: string;
+  pois?: POI[];
+}

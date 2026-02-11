@@ -122,7 +122,6 @@ jobs:
         run: npm run build
         env:
           API_URL: http://localhost:3001
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
   mobile:
     needs: changes
@@ -152,7 +151,6 @@ jobs:
       - name: Create .env file
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
-          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
       - name: Build Android
         working-directory: ./mobile/android
         run: |

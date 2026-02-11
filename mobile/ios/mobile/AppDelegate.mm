@@ -7,8 +7,6 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  NSString *apiKey = [ReactNativeConfig envFor:@"GOOGLE_MAPS_API_KEY"];
-  [GMSServices provideAPIKey:apiKey];
   self.moduleName = @"mobile";
   // You can add your custom initial props in the dictionary below.
   // They will be passed down to the ViewController used by React Native.

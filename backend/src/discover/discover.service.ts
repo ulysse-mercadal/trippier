@@ -7,15 +7,10 @@
 //
 // **************************************************************************
 
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-
-interface WikiResult {
-  url: string;
-  summary: string;
-}
 
 export interface EnrichedWikiData {
   description: string | null;
@@ -23,24 +18,6 @@ export interface EnrichedWikiData {
   wikivoyageUrl: string | null;
   website?: string | null;
   phoneNumber?: string | null;
-}
-
-interface GooglePlace {
-  place_id: string;
-  name: string;
-  rating?: number;
-  user_ratings_total?: number;
-  geometry: {
-    location: {
-      lat: number;
-      lng: number;
-    };
-  };
-  vicinity?: string;
-  formatted_address?: string;
-  photos?: Array<{
-    photo_reference: string;
-  }>;
 }
 
 export interface ProcessedPOI {
@@ -61,60 +38,64 @@ export interface ProcessedPOI {
   description: string | null;
 }
 
+interface GeoNamesWikiResult {
+  name: string;
+  toponymName?: string;
+  fcodeName?: string;
+  fcl?: string;
+  lat: number;
+  lng: number;
+  wikipediaURL?: string;
+  alternateNames?: { name: string; lang: string }[];
+  distance?: string;
+  rank?: number;
+}
+
+interface GeoNamesResponse {
+  geonames?: GeoNamesWikiResult[];
+  status?: { message: string; value: number };
+}
+
 @Injectable()
 export class DiscoverService {
-  private readonly googleApiKey: string | undefined;
-  private wikiCache = new Map<string, EnrichedWikiData>();
+  private readonly logger = new Logger(DiscoverService.name);
+  private readonly GEONAMES_API_URL = 'http://api.geonames.org';
+  private readonly username: string;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.googleApiKey = this.configService.get<string>('GOOGLE_MAPS_API_KEY');
+    this.username = this.configService.get<string>('GEONAMES_USERNAME') || 'demo';
   }
 
   async findNearbyPOIs(lat: number, lng: number, radius = 5, q?: string): Promise<ProcessedPOI[]> {
-    if (!this.googleApiKey) {
-      throw new HttpException(
-        'Google Maps API Key not configured',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-    const radiusInMeters = Math.min(radius * 1000, 50000);
-    const url = q
-      ? `https://maps.googleapis.com/maps/api/place/textsearch/json`
-      : `https://maps.googleapis.com/maps/api/place/nearbysearch/json`;
     try {
-      const response = await firstValueFrom(
-        this.httpService.get<{ results: GooglePlace[]; status: string; error_message?: string }>(
-          url,
-          {
-            params: {
-              location: `${lat},${lng}`,
-              radius: radiusInMeters,
-              query: q,
-              keyword: q,
-              type: 'tourist_attraction',
-              key: this.googleApiKey,
-            },
-          },
-        ),
-      );
-      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-        throw new Error(response.data.error_message || response.data.status);
+      let rawResults: GeoNamesWikiResult[] = [];
+      if (q) {
+        rawResults = await this.fetchGeoNamesSearch(q);
+      } else {
+        rawResults = await this.fetchGeoNamesNearby(lat, lng, radius);
       }
-      const results = response.data.results || [];
-      results.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
-      return results.slice(0, 20).map(item => ({
-        ...this.mapBasicInfo(item, lat, lng),
-        wikipediaUrl: null,
-        wikivoyageUrl: null,
-        officialWebsite: null,
-        phoneNumber: null,
-        description: null,
-      }));
-    } catch (_error) {
-      throw new HttpException('Failed to fetch data', HttpStatus.BAD_GATEWAY);
+      const filtered = rawResults.filter(item => this.isValidTouristPOI(item));
+      filtered.sort((a, b) => {
+        const hasWikiA = this.hasWikipedia(a);
+        const hasWikiB = this.hasWikipedia(b);
+        if (hasWikiA && !hasWikiB) {
+          return -1;
+        }
+        if (!hasWikiA && hasWikiB) {
+          return 1;
+        }
+        const distA = parseFloat(a.distance || '0');
+        const distB = parseFloat(b.distance || '0');
+        return distA - distB;
+      });
+      const top20 = filtered.slice(0, 20);
+      return top20.map(item => this.mapGeoNamesToPOI(item, lat, lng));
+    } catch (error) {
+      this.logger.error(`Discover Service Error:`, error);
+      throw new HttpException('Failed to fetch nearby places', HttpStatus.BAD_GATEWAY);
     }
   }
 
@@ -297,250 +278,144 @@ export class DiscoverService {
   }
 
   async getPOIDetails(
-    place_id: string,
-    name: string | undefined,
-    lat: number,
-    lng: number,
+    _place_id: string,
+    _name: string | undefined,
+    _lat: number,
+    _lng: number,
   ): Promise<EnrichedWikiData> {
-    const cacheKey = place_id;
-    if (this.wikiCache.has(cacheKey)) {
-      return this.wikiCache.get(cacheKey)!;
-    }
-
-    const googleDetails = await this.fetchPlaceDetails(place_id);
-    const resolvedName = name || googleDetails?.name || '';
-
-    const [wikiEN, voyEN] = await Promise.all([
-      resolvedName
-        ? this.fetchWikipedia('en.wikipedia.org', resolvedName, lat, lng)
-        : Promise.resolve(null),
-      this.fetchWikivoyage('en.wikivoyage.org', lat, lng),
-    ]);
-    const enriched: EnrichedWikiData = {
-      description: voyEN?.summary || wikiEN?.summary || null,
-      wikipediaUrl: wikiEN?.url || null,
-      wikivoyageUrl: voyEN?.url || null,
-      website: googleDetails?.website || null,
-      phoneNumber:
-        googleDetails?.formatted_phone_number || googleDetails?.international_phone_number || null,
-    };
-    this.wikiCache.set(cacheKey, enriched);
-    return enriched;
+    return Promise.resolve({
+      description: null,
+      wikipediaUrl: null,
+      wikivoyageUrl: null,
+      website: null,
+      phoneNumber: null,
+    });
   }
 
-  private mapBasicInfo(item: GooglePlace, userLat: number, userLng: number) {
+  private async fetchGeoNamesNearby(
+    lat: number,
+    lng: number,
+    radiusKm: number,
+  ): Promise<GeoNamesWikiResult[]> {
+    try {
+      const safeRadius = Math.min(radiusKm, 20);
+      const { data } = await firstValueFrom(
+        this.httpService.get<GeoNamesResponse>(`${this.GEONAMES_API_URL}/findNearbyJSON`, {
+          params: {
+            lat,
+            lng,
+            radius: safeRadius,
+            maxRows: 100,
+            username: this.username,
+            style: 'FULL',
+            localCountry: 'true',
+          },
+        }),
+      );
+      if (data.status) {
+        this.logger.warn(`GeoNames Error: ${data.status.message}`);
+        return [];
+      }
+      return data.geonames || [];
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.error('GeoNames Nearby Error', msg);
+      return [];
+    }
+  }
+
+  private async fetchGeoNamesSearch(q: string): Promise<GeoNamesWikiResult[]> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get<GeoNamesResponse>(`${this.GEONAMES_API_URL}/searchJSON`, {
+          params: {
+            q,
+            maxRows: 50,
+            username: this.username,
+            style: 'FULL',
+          },
+        }),
+      );
+      if (data.status) {
+        this.logger.warn(`GeoNames Search Error: ${data.status.message}`);
+        return [];
+      }
+      return data.geonames || [];
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.logger.error('GeoNames Search Error', msg);
+      return [];
+    }
+  }
+
+  private isValidTouristPOI(item: GeoNamesWikiResult): boolean {
+    const fcl = item.fcl || '';
+    const name = item.name || '';
+    if (fcl === 'A') {
+      return false;
+    }
+    if (name.includes('(') || name.includes(')')) {
+      return false;
+    }
+    return true;
+  }
+
+  private hasWikipedia(item: GeoNamesWikiResult): boolean {
+    if (item.wikipediaURL) {
+      return true;
+    }
+    if (
+      item.alternateNames &&
+      item.alternateNames.some(n => n.lang === 'link' && n.name.includes('wikipedia.org'))
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  private mapGeoNamesToPOI(
+    item: GeoNamesWikiResult,
+    userLat: number,
+    userLng: number,
+  ): ProcessedPOI {
+    const dist = item.distance
+      ? parseFloat(item.distance)
+      : this.calculateDistance(userLat, userLng, item.lat, item.lng);
+    let wikiUrl = item.wikipediaURL || null;
+    if (!wikiUrl && item.alternateNames) {
+      const link = item.alternateNames.find(
+        n => n.lang === 'link' && n.name.includes('wikipedia.org'),
+      );
+      if (link) {
+        wikiUrl = link.name;
+      }
+    }
+    if (wikiUrl && !wikiUrl.startsWith('http')) {
+      wikiUrl = 'https://' + wikiUrl;
+    }
     return {
-      place_id: item.place_id,
+      place_id: `geo-${item.toponymName || item.name}`,
       name: item.name,
-      type: 'Tourist Attraction',
-      rating: item.rating,
-      user_ratings_total: item.user_ratings_total,
-      distance: this.calculateDistance(
-        userLat,
-        userLng,
-        item.geometry.location.lat,
-        item.geometry.location.lng,
-      ),
-      lat: item.geometry.location.lat,
-      lng: item.geometry.location.lng,
-      address: item.formatted_address || item.vicinity,
-      thumbnail: item.photos ? this.getPhotoUrl(item.photos[0].photo_reference) : null,
+      type: item.fcodeName || 'Attraction',
+      rating: 4.0,
+      user_ratings_total: 0,
+      distance: dist,
+      lat: item.lat,
+      lng: item.lng,
+      address: '',
+      thumbnail: null,
+      wikipediaUrl: wikiUrl,
+      wikivoyageUrl: null,
+      officialWebsite: null,
+      phoneNumber: null,
+      description: null,
     };
-  }
-
-  private async fetchPlaceDetails(placeId: string) {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get<{
-          result: {
-            name?: string;
-            website?: string;
-            formatted_phone_number?: string;
-            international_phone_number?: string;
-          };
-        }>(`https://maps.googleapis.com/maps/api/place/details/json`, {
-          params: {
-            place_id: placeId,
-            fields: 'name,website,formatted_phone_number,international_phone_number',
-            key: this.googleApiKey,
-          },
-        }),
-      );
-      return response.data.result;
-    } catch (_e) {
-      return null;
-    }
-  }
-
-  private async fetchWikipedia(
-    domain: string,
-    title: string,
-    lat: number,
-    lng: number,
-  ): Promise<WikiResult | null> {
-    try {
-      const apiUrl = `https://${domain}/w/api.php`;
-      const headers = { 'User-Agent': 'TrippierBot/1.0' };
-      const geoResponse = await firstValueFrom(
-        this.httpService.get<{
-          query?: { geosearch: Array<{ title: string; pageid: number; dist: number }> };
-        }>(apiUrl, {
-          headers,
-          params: {
-            action: 'query',
-            list: 'geosearch',
-            gscoord: `${lat}|${lng}`,
-            gsradius: 1000,
-            gslimit: 10,
-            format: 'json',
-            origin: '*',
-          },
-        }),
-      );
-      const searchResponse = await firstValueFrom(
-        this.httpService.get<[string, string[]]>(apiUrl, {
-          headers,
-          params: {
-            action: 'opensearch',
-            search: title,
-            limit: 5,
-            namespace: 0,
-            format: 'json',
-            origin: '*',
-          },
-        }),
-      );
-      const geoResults = geoResponse.data.query?.geosearch || [];
-      const searchResults = searchResponse.data[1] || [];
-      const scores = new Map<string, { pageid?: number; score: number }>();
-      const normalizedTitle = title.toLowerCase();
-      geoResults.forEach((res, index) => {
-        const score = 100 - index * 5;
-        scores.set(res.title, { pageid: res.pageid, score });
-      });
-      searchResults.forEach((resTitle, index) => {
-        const existing = scores.get(resTitle);
-        let score = (existing?.score || 0) + (50 - index * 10);
-        const resTitleLower = resTitle.toLowerCase();
-        if (resTitleLower === normalizedTitle) {
-          score += 150;
-        } else if (
-          resTitleLower.includes(normalizedTitle) ||
-          normalizedTitle.includes(resTitleLower)
-        ) {
-          score += 70;
-        }
-        if (existing) {
-          score += 200;
-        }
-        scores.set(resTitle, { pageid: existing?.pageid, score });
-      });
-      let bestTitle: string | null = null;
-      let maxScore = -1;
-      for (const [resTitle, data] of scores.entries()) {
-        if (data.score > maxScore) {
-          maxScore = data.score;
-          bestTitle = resTitle;
-        }
-      }
-      if (bestTitle && maxScore > 30) {
-        const bestData = scores.get(bestTitle)!;
-        const detailsResponse = await firstValueFrom(
-          this.httpService.get<{
-            query: { pages: Record<string, { fullurl: string; extract?: string }> };
-          }>(apiUrl, {
-            headers,
-            params: {
-              action: 'query',
-              prop: 'extracts|info',
-              exintro: true,
-              explaintext: true,
-              inprop: 'url',
-              [bestData.pageid ? 'pageids' : 'titles']: bestData.pageid || bestTitle,
-              format: 'json',
-              origin: '*',
-            },
-          }),
-        );
-        const pagesData = detailsResponse.data.query.pages;
-        const pageData = pagesData[Object.keys(pagesData)[0]];
-        if (pageData && !('missing' in pageData)) {
-          return {
-            url: pageData.fullurl,
-            summary: pageData.extract ? pageData.extract.split('\n')[0] : '',
-          };
-        }
-      }
-    } catch (_e) {
-      return null;
-    }
-    return null;
-  }
-
-  private async fetchWikivoyage(
-    domain: string,
-    lat: number,
-    lng: number,
-  ): Promise<WikiResult | null> {
-    try {
-      const apiUrl = `https://${domain}/w/api.php`;
-      const headers = { 'User-Agent': 'TrippierBot/1.0' };
-      const geoResponse = await firstValueFrom(
-        this.httpService.get<{ query?: { geosearch: Array<{ title: string; pageid: number }> } }>(
-          apiUrl,
-          {
-            headers,
-            params: {
-              action: 'query',
-              list: 'geosearch',
-              gscoord: `${lat}|${lng}`,
-              gsradius: 5000,
-              gslimit: 1,
-              format: 'json',
-              origin: '*',
-            },
-          },
-        ),
-      );
-      const page = geoResponse.data.query?.geosearch?.[0];
-      if (page) {
-        const detailsResponse = await firstValueFrom(
-          this.httpService.get<{
-            query: { pages: Record<string, { fullurl: string; extract?: string }> };
-          }>(apiUrl, {
-            headers,
-            params: {
-              action: 'query',
-              prop: 'extracts|info',
-              exintro: true,
-              explaintext: true,
-              inprop: 'url',
-              pageids: page.pageid,
-              format: 'json',
-              origin: '*',
-            },
-          }),
-        );
-        const pagesData = detailsResponse.data.query.pages;
-        const pageData = pagesData[Object.keys(pagesData)[0]];
-        if (pageData && !('missing' in pageData)) {
-          return {
-            url: pageData.fullurl,
-            summary: pageData.extract ? pageData.extract.split('\n')[0] : '',
-          };
-        }
-      }
-    } catch (_e) {
-      return null;
-    }
-    return null;
-  }
-
-  private getPhotoUrl(reference: string) {
-    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${reference}&key=${this.googleApiKey}`;
   }
 
   private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) {
+      return 0;
+    }
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
