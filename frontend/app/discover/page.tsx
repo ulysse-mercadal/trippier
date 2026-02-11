@@ -261,6 +261,18 @@ export default function DiscoverPage() {
     setHoveredPoi(poi);
   }, []);
 
+  const targetLocation = React.useMemo(() => {
+    const poi = focusedPoi || selectedPoi;
+    if (!poi) {
+      return null;
+    }
+    return {
+      lat: typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat,
+      lng: typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng,
+      id: poi.place_id,
+    };
+  }, [focusedPoi, selectedPoi]);
+
   return (
     <div className="relative w-full h-full bg-white overflow-hidden">
       <FilterBar
@@ -301,31 +313,7 @@ export default function DiscoverPage() {
           mapPois={visibleMapPois}
           onPoiClick={handlePoiSelect}
           hoveredPoi={hoveredPoi}
-          targetLocation={
-            focusedPoi
-              ? {
-                  lat:
-                    typeof focusedPoi.lat === 'string'
-                      ? parseFloat(focusedPoi.lat)
-                      : focusedPoi.lat,
-                  lng:
-                    typeof focusedPoi.lng === 'string'
-                      ? parseFloat(focusedPoi.lng)
-                      : focusedPoi.lng,
-                }
-              : selectedPoi
-                ? {
-                    lat:
-                      typeof selectedPoi.lat === 'string'
-                        ? parseFloat(selectedPoi.lat)
-                        : selectedPoi.lat,
-                    lng:
-                      typeof selectedPoi.lng === 'string'
-                        ? parseFloat(selectedPoi.lng)
-                        : selectedPoi.lng,
-                  }
-                : null
-          }
+          targetLocation={targetLocation}
         />
       </motion.div>
     </div>
