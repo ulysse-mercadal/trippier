@@ -6,10 +6,12 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "start": "react-native start",
+    "start": "NODE_OPTIONS='--no-deprecation' react-native start",
+    "start:clean": "NODE_OPTIONS='--no-deprecation' react-native start --reset-cache",
     "test": "jest"
   },
   "dependencies": {
+    "@maplibre/maplibre-react-native": "^10.4.2",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.18",

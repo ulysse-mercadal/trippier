@@ -38,6 +38,7 @@ export default function DiscoverPage() {
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
+  const lastFetchedCoords = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     const checkSize = () => {
@@ -59,7 +60,6 @@ export default function DiscoverPage() {
       console.error('Failed to fetch maps:', error);
     }
   }, [token]);
-
   useEffect(() => {
     if (token) {
       fetchMaps();
@@ -165,12 +165,32 @@ export default function DiscoverPage() {
     [fetchSearch],
   );
 
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
   const handleMapMove = useCallback(
     (lat: number, lng: number) => {
       lastCoords.current = { lat, lng };
-      fetchNearby(lat, lng);
-      if (searchQuery) {
-        fetchSearch(lat, lng, searchQuery);
+      const shouldFetch =
+        !lastFetchedCoords.current ||
+        calculateDistance(lat, lng, lastFetchedCoords.current.lat, lastFetchedCoords.current.lng) >
+          0.5;
+      if (shouldFetch) {
+        lastFetchedCoords.current = { lat, lng };
+        fetchNearby(lat, lng);
+        if (searchQuery) {
+          fetchSearch(lat, lng, searchQuery);
+        }
       }
     },
     [fetchNearby, fetchSearch, searchQuery],

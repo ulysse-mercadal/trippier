@@ -15,11 +15,10 @@ jest.mock('react-native-reanimated', () => {
 
 jest.mock('react-native-config', () => ({
   API_URL: 'http://localhost:3001',
-  GOOGLE_MAPS_API_KEY: 'test_key',
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
 jest.mock('react-native-maps', () => {
@@ -45,7 +44,7 @@ jest.mock('react-native-maps', () => {
 jest.mock('react-native-map-clustering', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return (props) => React.createElement('ClusteredMapView', props, props.children);
+  return props => React.createElement('ClusteredMapView', props, props.children);
 });
 
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
