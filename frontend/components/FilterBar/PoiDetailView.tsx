@@ -23,6 +23,7 @@ import {
 import clsx from 'clsx';
 import Image from 'next/image';
 import { POI, Map } from '../../lib/types';
+import CommentSection from './CommentSection';
 
 interface PoiDetailViewProps {
   selectedPoi: POI;
@@ -48,11 +49,13 @@ export default function PoiDetailView({
 
   const savedInMaps = useMemo(() => {
     return maps.filter(m =>
-      m.pois?.some(
-        p =>
-          Number(p.lat).toFixed(6) === Number(selectedPoi.lat).toFixed(6) &&
-          Number(p.lng).toFixed(6) === Number(selectedPoi.lng).toFixed(6),
-      ),
+      m.pois?.some(p => {
+        const lat1 = Number(p.lat);
+        const lng1 = Number(p.lng);
+        const lat2 = Number(selectedPoi.lat);
+        const lng2 = Number(selectedPoi.lng);
+        return Math.abs(lat1 - lat2) < 0.0001 && Math.abs(lng1 - lng2) < 0.0001;
+      }),
     );
   }, [maps, selectedPoi.lat, selectedPoi.lng]);
 
@@ -200,12 +203,6 @@ export default function PoiDetailView({
             )}
           </div>
         </section>
-        <section>
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-            Location
-          </h4>
-          <p className="text-sm text-gray-500">{selectedPoi.address}</p>
-        </section>
 
         {savedInMaps.length > 0 && (
           <section className="pt-4 border-t border-gray-100">
@@ -237,6 +234,8 @@ export default function PoiDetailView({
             </div>
           </section>
         )}
+
+        <CommentSection poi={selectedPoi} />
       </div>
     </motion.div>
   );

@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:e2e:cli": "npx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
     "test:e2e:maps": "npx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
-    "test:e2e:all": "npx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Discover.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json"
+    "test:e2e:comments": "npx newman run ./postman/Trippier_Comments.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
+    "test:e2e:all": "npx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Discover.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Comments.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

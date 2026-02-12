@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
   password String
   name     String?
-  role     Role    @default(USER)
+  role     Role     @default(USER)
   maps     Map[]
+  comments Comment[]
 }
 
 enum Role {
@@ -55,6 +56,7 @@ model PointOfInterest {
   phoneNumber       String?
 
   maps              MapPoi[]
+  comments          Comment[]
 }
 
 model MapPoi {
@@ -66,4 +68,24 @@ model MapPoi {
   personalDescription String?
 
   @@id([mapId, poiId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  text      String
+  isPublic  Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  
+  poiId     String
+  poi       PointOfInterest @relation(fields: [poiId], references: [id])
+  
+  parentId  Int?
+  parent    Comment? @relation("Thread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("Thread")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

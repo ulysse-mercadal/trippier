@@ -186,6 +186,9 @@ export default function DiscoverPage() {
   const handleMapMove = useCallback(
     (lat: number, lng: number) => {
       lastCoords.current = { lat, lng };
+      if (selectedPoi) {
+        return;
+      }
       const shouldFetch =
         !lastFetchedCoords.current ||
         calculateDistance(lat, lng, lastFetchedCoords.current.lat, lastFetchedCoords.current.lng) >
@@ -198,7 +201,7 @@ export default function DiscoverPage() {
         }
       }
     },
-    [fetchNearby, fetchSearch, searchQuery, weights],
+    [fetchNearby, fetchSearch, searchQuery, weights, selectedPoi],
   );
 
   const handleWeightsChange = useCallback(
@@ -212,46 +215,56 @@ export default function DiscoverPage() {
     [fetchNearby, fetchSearch, searchQuery],
   );
 
-  const handlePoiSelect = useCallback(async (poi: POI | null) => {
-    setSelectedPoi(poi);
-    if (poi) {
-      setIsExpanded(true);
-      setFocusedPoi(poi);
-      const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
-      const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
-      lastCoords.current = { lat, lng };
-      try {
-        setLoading(true);
-        const response = await client.get('/discover/details', {
-          params: {
-            place_id: poi.place_id,
-            name: poi.name,
-            lat,
-            lng,
-          },
-        });
-        setSelectedPoi(prev =>
-          prev
-            ? {
-                ...prev,
-                description: response.data.description,
-                wikivoyageUrl: response.data.wikivoyageUrl,
-                officialWebsite: response.data.website,
-                phoneNumber: response.data.phoneNumber,
-                lat: response.data.lat ?? prev.lat,
-                lng: response.data.lng ?? prev.lng,
-              }
-            : null,
-        );
-      } catch (error) {
-        console.error('Failed to fetch POI details:', error);
-      } finally {
-        setLoading(false);
+  const handlePoiSelect = useCallback(
+    async (poi: POI | null) => {
+      if (
+        poi &&
+        selectedPoi &&
+        (poi.place_id || poi.id) === (selectedPoi.place_id || selectedPoi.id)
+      ) {
+        return;
       }
-    } else {
-      setFocusedPoi(null);
-    }
-  }, []);
+      setSelectedPoi(poi);
+      if (poi) {
+        setIsExpanded(true);
+        setFocusedPoi(poi);
+        const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
+        const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
+        lastCoords.current = { lat, lng };
+        try {
+          setLoading(true);
+          const response = await client.get('/discover/details', {
+            params: {
+              place_id: poi.place_id,
+              name: poi.name,
+              lat,
+              lng,
+            },
+          });
+          setSelectedPoi(prev =>
+            prev && (prev.place_id || prev.id) === (poi.place_id || poi.id)
+              ? {
+                  ...prev,
+                  description: response.data.description,
+                  wikivoyageUrl: response.data.wikivoyageUrl,
+                  officialWebsite: response.data.website,
+                  phoneNumber: response.data.phoneNumber,
+                  lat: response.data.lat ?? prev.lat,
+                  lng: response.data.lng ?? prev.lng,
+                }
+              : prev,
+          );
+        } catch (error) {
+          console.error('Failed to fetch POI details:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setFocusedPoi(null);
+      }
+    },
+    [selectedPoi],
+  );
 
   const handleZoomToPoi = useCallback((poi: POI) => {
     setFocusedPoi(poi);
