@@ -22,7 +22,7 @@ jobs:
           bun-version: latest
       - name: Install Dependencies
         working-directory: ./mobile
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --hoist
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
