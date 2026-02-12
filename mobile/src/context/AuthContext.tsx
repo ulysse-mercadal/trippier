@@ -40,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (storageToken && storageUser) {
         setToken(storageToken);
         setUser(JSON.parse(storageUser));
-        client.defaults.headers.common.Authorization = `Bearer ${storageToken}`;
       }
       setLoading(false);
     }
@@ -52,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { access_token, user: userData } = response.data;
     setToken(access_token);
     setUser(userData);
-    client.defaults.headers.common.Authorization = `Bearer ${access_token}`;
     await AsyncStorage.setItem('@Trippier:token', access_token);
     await AsyncStorage.setItem('@Trippier:user', JSON.stringify(userData));
   }
@@ -62,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { access_token, user: userData } = response.data;
     setToken(access_token);
     setUser(userData);
-    client.defaults.headers.common.Authorization = `Bearer ${access_token}`;
     await AsyncStorage.setItem('@Trippier:token', access_token);
     await AsyncStorage.setItem('@Trippier:user', JSON.stringify(userData));
   }
@@ -71,7 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await AsyncStorage.multiRemove(['@Trippier:token', '@Trippier:user']);
     setToken(null);
     setUser(null);
-    delete client.defaults.headers.common.Authorization;
   }
 
   return (

@@ -24,7 +24,7 @@ services:
     volumes:
       - ./backend:/app:z
       - /app/node_modules
-    command: sh -c "npx wait-on tcp:db:5432 && npx prisma db push && npx prisma db seed && npm run start:dev"
+    command: sh -c "bunx wait-on tcp:db:5432 && bunx prisma db push && bunx prisma db seed && bun run start:dev"
     depends_on:
       - db
     env_file:
@@ -49,7 +49,7 @@ services:
       - ./frontend:/app:z
       - /app/node_modules
       - /app/.next
-    command: npm run dev
+    command: bun run dev
     depends_on:
       - backend
     env_file:

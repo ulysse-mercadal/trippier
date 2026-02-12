@@ -14,16 +14,16 @@ build-apk:
 	@echo "APK generated in mobile/android/app/build/outputs/apk/release/"
 
 lint:
-	cd backend && npx eslint "{src,apps,libs,test}/**/*.ts"
-	cd frontend && npm run lint
+	cd backend && bunx eslint "{src,apps,libs,test}/**/*.ts"
+	cd frontend && bun run lint
 	cd mobile && npm run lint
 
 fix-lint:
-	cd backend && npm run lint
-	cd frontend && npm run lint -- --fix
+	cd backend && bun run lint
+	cd frontend && bun run lint -- --fix
 	cd mobile && npm run lint -- --fix
 
 test: lint
-	cd backend && npm run test:e2e:all
+	cd backend && bun run test:e2e:all
 
 .PHONY: up down fclean build-apk lint fix-lint test
