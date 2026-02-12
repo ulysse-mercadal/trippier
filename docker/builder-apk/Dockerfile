@@ -4,6 +4,6 @@ WORKDIR /app/mobile
 
 # Pre-download dependencies to cache them if possible (optional optimization)
 # COPY mobile/package*.json .
-# RUN npm install
+# RUN bun install
 
 CMD ["bash", "-c", "cd android && chmod +x gradlew && ./gradlew assembleRelease"]

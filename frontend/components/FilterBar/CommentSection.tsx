@@ -14,7 +14,6 @@ import {
   IoSend,
   IoChatbubbleOutline,
   IoLockClosedOutline,
-  IoEyeOffOutline,
   IoTrashOutline,
   IoPencilOutline,
 } from 'react-icons/io5';
@@ -163,16 +162,14 @@ export default function CommentSection({ poi }: CommentSectionProps) {
           </p>
           <button
             onClick={() => (window.location.href = '/')}
-            className="w-full py-3 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest"
-          >
+            className="w-full py-3 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest">
             Login or Register
           </button>
         </div>
       ) : (
         <form
           onSubmit={handleSubmit}
-          className="mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100"
-        >
+          className="mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100">
           {(replyTo || editingComment) && (
             <div className="mb-2 flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200">
               <span className="text-xs text-gray-500">
@@ -190,8 +187,7 @@ export default function CommentSection({ poi }: CommentSectionProps) {
                   setEditingComment(null);
                   setText('');
                 }}
-                className="text-xs font-bold text-red-500"
-              >
+                className="text-xs font-bold text-red-500">
                 Cancel
               </button>
             </div>
@@ -213,8 +209,7 @@ export default function CommentSection({ poi }: CommentSectionProps) {
                     !isPublic
                       ? 'bg-black text-white'
                       : 'bg-white text-gray-400 border border-gray-200',
-                  )}
-                >
+                  )}>
                   Private Note
                 </button>
                 <button
@@ -222,9 +217,10 @@ export default function CommentSection({ poi }: CommentSectionProps) {
                   onClick={() => setIsPublic(true)}
                   className={clsx(
                     'px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all',
-                    isPublic ? 'bg-black text-white' : 'bg-white text-gray-400 border border-gray-200',
-                  )}
-                >
+                    isPublic
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-400 border border-gray-200',
+                  )}>
                   Public Comment
                 </button>
               </div>
@@ -232,8 +228,7 @@ export default function CommentSection({ poi }: CommentSectionProps) {
             <button
               type="submit"
               disabled={loading || !text.trim()}
-              className="ml-auto p-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
-            >
+              className="ml-auto p-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50">
               <IoSend size={18} />
             </button>
           </div>
@@ -241,9 +236,7 @@ export default function CommentSection({ poi }: CommentSectionProps) {
       )}
 
       <div className="space-y-6">
-        {comments
-          .filter(c => !c.parentId)
-          .map(comment => renderComment(comment))}
+        {comments.filter(c => !c.parentId).map(comment => renderComment(comment))}
         {comments.length === 0 && (
           <p className="text-center text-gray-400 text-sm py-4 italic">No notes or comments yet.</p>
         )}

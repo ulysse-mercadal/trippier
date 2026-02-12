@@ -11,7 +11,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
-import { Role, Comment } from '@prisma/client';
+import { Role, Comment, Prisma } from '@prisma/client';
 
 @Injectable()
 export class CommentsService {
@@ -60,13 +60,13 @@ export class CommentsService {
   }
 
   async findByPoi(poiId: string, userId?: number): Promise<Comment[]> {
-    const whereClause: any = {
+    const whereClause: Prisma.CommentWhereInput = {
       poiId,
       OR: [{ isPublic: true, hidden: false }],
     };
 
     if (userId) {
-      whereClause.OR.push({ userId: userId, isPublic: false });
+      (whereClause.OR as Prisma.CommentWhereInput[]).push({ userId: userId, isPublic: false });
     }
 
     const comments = await this.prisma.comment.findMany({
@@ -87,9 +87,13 @@ export class CommentsService {
     });
 
     // Sort: user's public comments first, then others
-    return (comments as any).sort((a, b) => {
-      if (userId && a.userId === userId && a.isPublic && b.userId !== userId) return -1;
-      if (userId && b.userId === userId && b.isPublic && a.userId !== userId) return 1;
+    return comments.sort((a, b) => {
+      if (userId && a.userId === userId && a.isPublic && b.userId !== userId) {
+        return -1;
+      }
+      if (userId && b.userId === userId && b.isPublic && a.userId !== userId) {
+        return 1;
+      }
       return 0;
     });
   }

@@ -16,12 +16,12 @@ build-apk:
 lint:
 	cd backend && bunx eslint "{src,apps,libs,test}/**/*.ts"
 	cd frontend && bun run lint
-	cd mobile && npm run lint
+	cd mobile && bun run lint
 
 fix-lint:
 	cd backend && bun run lint
 	cd frontend && bun run lint -- --fix
-	cd mobile && npm run lint -- --fix
+	cd mobile && bun run lint -- --fix
 
 test: lint
 	cd backend && bun run test:e2e:all

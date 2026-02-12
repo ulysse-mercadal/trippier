@@ -132,20 +132,17 @@ export default function MapSelectionModal({
           ? 'opacity-100 backdrop-blur-sm bg-black/30'
           : 'opacity-0 backdrop-blur-none bg-black/0'
       }`}
-      onClick={onClose}
-    >
+      onClick={onClose}>
       <div
         className={`bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 transform transition-all duration-300 flex flex-col max-h-[80vh] ${
           isOpen ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
-        onClick={e => e.stopPropagation()}
-      >
+        onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-4 shrink-0">
           <h3 className="text-xl font-bold text-gray-900">Save to Map</h3>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-          >
+            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
             <IoClose size={24} />
           </button>
         </div>
@@ -157,8 +154,7 @@ export default function MapSelectionModal({
             </p>
             <button
               onClick={() => (window.location.href = '/')}
-              className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest shadow-lg active:scale-95"
-            >
+              className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest shadow-lg active:scale-95">
               Login or Register
             </button>
           </div>
@@ -185,13 +181,11 @@ export default function MapSelectionModal({
                       map.hasPoi
                         ? 'bg-black text-white border-black'
                         : 'bg-gray-50 text-gray-900 border-gray-100 hover:bg-gray-100'
-                    }`}
-                  >
+                    }`}>
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${
                         map.hasPoi ? 'bg-white/20' : 'bg-white'
-                      }`}
-                    >
+                      }`}>
                       {map.icon || '🌍'}
                     </div>
                     <div className="flex-1 text-left min-w-0">
@@ -200,8 +194,7 @@ export default function MapSelectionModal({
                         <div
                           className={`text-xs truncate ${
                             map.hasPoi ? 'text-gray-300' : 'text-gray-500'
-                          }`}
-                        >
+                          }`}>
                           {map.description}
                         </div>
                       )}
@@ -217,8 +210,7 @@ export default function MapSelectionModal({
         <div className="mt-4 pt-4 border-t border-gray-100 shrink-0">
           <button
             onClick={onClose}
-            className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl transition-colors"
-          >
+            className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl transition-colors">
             Done
           </button>
         </div>

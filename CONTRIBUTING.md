@@ -48,8 +48,8 @@ If you need to manually check or fix files:
 
 ```bash
 cd mobile
-npm run lint          # Check for errors
-npx eslint . --fix    # Auto-fix errors
+bun run lint          # Check for errors
+bunx eslint . --fix    # Auto-fix errors
 ```
 
 ---
