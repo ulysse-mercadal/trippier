@@ -36,7 +36,12 @@ export default function DiscoverPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [weights, setWeights] = useState('culture:5,nature:5,food:5');
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const selectedPoiRef = useRef<POI | null>(null);
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
+
+  useEffect(() => {
+    selectedPoiRef.current = selectedPoi;
+  }, [selectedPoi]);
   const [hoveredPoi, setHoveredPoi] = useState<POI | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
@@ -186,7 +191,7 @@ export default function DiscoverPage() {
   const handleMapMove = useCallback(
     (lat: number, lng: number) => {
       lastCoords.current = { lat, lng };
-      if (selectedPoi) {
+      if (selectedPoiRef.current) {
         return;
       }
       const shouldFetch =
@@ -201,7 +206,7 @@ export default function DiscoverPage() {
         }
       }
     },
-    [fetchNearby, fetchSearch, searchQuery, weights, selectedPoi],
+    [fetchNearby, fetchSearch, searchQuery, weights],
   );
 
   const handleWeightsChange = useCallback(
@@ -219,12 +224,13 @@ export default function DiscoverPage() {
     async (poi: POI | null) => {
       if (
         poi &&
-        selectedPoi &&
-        (poi.place_id || poi.id) === (selectedPoi.place_id || selectedPoi.id)
+        selectedPoiRef.current &&
+        (poi.place_id || poi.id) === (selectedPoiRef.current.place_id || selectedPoiRef.current.id)
       ) {
         return;
       }
       setSelectedPoi(poi);
+      selectedPoiRef.current = poi;
       if (poi) {
         setIsExpanded(true);
         setFocusedPoi(poi);
@@ -245,10 +251,10 @@ export default function DiscoverPage() {
             prev && (prev.place_id || prev.id) === (poi.place_id || poi.id)
               ? {
                   ...prev,
-                  description: response.data.description,
-                  wikivoyageUrl: response.data.wikivoyageUrl,
-                  officialWebsite: response.data.website,
-                  phoneNumber: response.data.phoneNumber,
+                  description: response.data.description ?? prev.description,
+                  wikivoyageUrl: response.data.wikivoyageUrl ?? prev.wikivoyageUrl,
+                  officialWebsite: response.data.website ?? prev.officialWebsite,
+                  phoneNumber: response.data.phoneNumber ?? prev.phoneNumber,
                   lat: response.data.lat ?? prev.lat,
                   lng: response.data.lng ?? prev.lng,
                 }
@@ -263,7 +269,7 @@ export default function DiscoverPage() {
         setFocusedPoi(null);
       }
     },
-    [selectedPoi],
+    [],
   );
 
   const handleZoomToPoi = useCallback((poi: POI) => {
