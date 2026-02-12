@@ -19,11 +19,14 @@ import {
   IoCheckmarkOutline,
   IoCallOutline,
   IoBookmarkOutline,
+  IoBookmark,
 } from 'react-icons/io5';
 import clsx from 'clsx';
 import Image from 'next/image';
 import { POI, Map } from '../../lib/types';
 import CommentSection from './CommentSection';
+import MapSelectionModal from '../MapSelectionModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface PoiDetailViewProps {
   selectedPoi: POI;
@@ -44,8 +47,10 @@ export default function PoiDetailView({
   maps = [],
   onMapClick,
 }: PoiDetailViewProps) {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   const savedInMaps = useMemo(() => {
     return maps.filter(m =>
@@ -84,23 +89,57 @@ export default function PoiDetailView({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col overflow-y-auto p-6 scrollbar-hide pb-24">
-      <div className="flex items-center mb-6">
-        <button
-          onClick={() => {
-            if (onPoiSelect) {
-              onPoiSelect(null);
-            }
-            setInputValue('');
-            if (onSearch) {
-              onSearch('');
-            }
-          }}
-          className="flex items-center text-gray-900 font-black text-lg transition-colors hover:text-gray-600">
-          <IoArrowBack size={24} className="mr-2" /> Back
-        </button>
-      </div>
-      {selectedPoi.thumbnail && !isCurrentImgError && (
+      className="flex-1 flex flex-col overflow-y-auto p-6 scrollbar-hide pb-24"
+    >
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={() => {
+                  if (onPoiSelect) {
+                    onPoiSelect(null);
+                  }
+                  setInputValue('');
+                  if (onSearch) {
+                    onSearch('');
+                  }
+                }}
+                className="flex items-center text-gray-900 font-black text-lg transition-colors hover:text-gray-600"
+              >
+                <IoArrowBack size={24} className="mr-2" /> Back
+              </button>
+      
+              {user && (
+                <button
+                  onClick={() => setIsSaveModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all bg-black text-white hover:bg-gray-800"
+                >
+                  {savedInMaps.length > 0 ? (
+                    <>
+                      <IoBookmark size={18} /> Saved
+                    </>
+                  ) : (
+                    <>
+                      <IoBookmarkOutline size={18} /> Save
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+      
+            {!user && (
+              <div className="mb-8 bg-gray-50 p-6 rounded-3xl border border-gray-100 text-center">
+                <p className="text-sm text-gray-600 mb-4 font-medium">
+                  Login to save this place to your maps and plan your trip.
+                </p>
+                <button
+                  onClick={() => (window.location.href = '/')}
+                  className="w-full py-3 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest shadow-sm"
+                >
+                  Login or Register
+                </button>
+              </div>
+            )}
+      
+            {selectedPoi.thumbnail && !isCurrentImgError && (
         <div className="w-full h-auto rounded-3xl overflow-hidden mb-6 shadow-md border border-gray-100 relative min-h-50">
           <Image
             src={selectedPoi.thumbnail}
@@ -237,6 +276,12 @@ export default function PoiDetailView({
 
         <CommentSection poi={selectedPoi} />
       </div>
+
+      <MapSelectionModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        poi={selectedPoi}
+      />
     </motion.div>
   );
 }

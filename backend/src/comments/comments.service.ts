@@ -59,15 +59,18 @@ export class CommentsService {
     });
   }
 
-  async findByPoi(poiId: string, userId: number): Promise<Comment[]> {
+  async findByPoi(poiId: string, userId?: number): Promise<Comment[]> {
+    const whereClause: any = {
+      poiId,
+      OR: [{ isPublic: true, hidden: false }],
+    };
+
+    if (userId) {
+      whereClause.OR.push({ userId: userId, isPublic: false });
+    }
+
     const comments = await this.prisma.comment.findMany({
-      where: {
-        poiId,
-        OR: [
-          { isPublic: true, hidden: false },
-          { userId: userId, isPublic: false },
-        ],
-      },
+      where: whereClause,
       include: {
         user: {
           select: { id: true, name: true },
@@ -85,8 +88,8 @@ export class CommentsService {
 
     // Sort: user's public comments first, then others
     return (comments as any).sort((a, b) => {
-      if (a.userId === userId && a.isPublic && b.userId !== userId) return -1;
-      if (b.userId === userId && b.isPublic && a.userId !== userId) return 1;
+      if (userId && a.userId === userId && a.isPublic && b.userId !== userId) return -1;
+      if (userId && b.userId === userId && b.isPublic && a.userId !== userId) return 1;
       return 0;
     });
   }

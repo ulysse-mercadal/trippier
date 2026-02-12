@@ -138,7 +138,7 @@ export default function CommentSection({ poi }: CommentSectionProps) {
         </div>
       </div>
       <p className="text-sm text-gray-700 leading-relaxed">{comment.text}</p>
-      {comment.isPublic && !isReply && (
+      {user && comment.isPublic && !isReply && (
         <button
           onClick={() => setReplyTo(comment)}
           className="text-[10px] font-bold text-gray-400 uppercase tracking-wider hover:text-black transition-colors w-fit">
@@ -156,72 +156,89 @@ export default function CommentSection({ poi }: CommentSectionProps) {
         <h4 className="text-xs font-bold uppercase tracking-wider">Notes & Comments</h4>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-        {(replyTo || editingComment) && (
-          <div className="mb-2 flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200">
-            <span className="text-xs text-gray-500">
-              {editingComment ? (
-                'Editing your comment'
-              ) : (
-                <>
-                  Replying to <span className="font-bold">{replyTo?.user.name}</span>
-                </>
-              )}
-            </span>
-            <button
-              onClick={() => {
-                setReplyTo(null);
-                setEditingComment(null);
-                setText('');
-              }}
-              className="text-xs font-bold text-red-500">
-              Cancel
-            </button>
-          </div>
-        )}
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder={replyTo ? 'Write a reply...' : 'Add a private note or public comment...'}
-          className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-900 placeholder-gray-400 resize-none h-20"
-        />
-        <div className="flex justify-between items-center mt-2">
-          {!replyTo && !editingComment && (
-            <div className="flex gap-2">
+      {!user ? (
+        <div className="mb-8 bg-gray-50 p-6 rounded-3xl border border-gray-100 text-center">
+          <p className="text-sm text-gray-600 mb-4">
+            Join the community to share your experience or save private notes about this place.
+          </p>
+          <button
+            onClick={() => (window.location.href = '/')}
+            className="w-full py-3 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest"
+          >
+            Login or Register
+          </button>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleSubmit}
+          className="mb-8 bg-gray-50 p-4 rounded-2xl border border-gray-100"
+        >
+          {(replyTo || editingComment) && (
+            <div className="mb-2 flex justify-between items-center bg-white p-2 rounded-lg border border-gray-200">
+              <span className="text-xs text-gray-500">
+                {editingComment ? (
+                  'Editing your comment'
+                ) : (
+                  <>
+                    Replying to <span className="font-bold">{replyTo?.user.name}</span>
+                  </>
+                )}
+              </span>
               <button
-                type="button"
-                onClick={() => setIsPublic(false)}
-                className={clsx(
-                  'px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all',
-                  !isPublic
-                    ? 'bg-black text-white'
-                    : 'bg-white text-gray-400 border border-gray-200',
-                )}>
-                Private Note
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPublic(true)}
-                className={clsx(
-                  'px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all',
-                  isPublic
-                    ? 'bg-black text-white'
-                    : 'bg-white text-gray-400 border border-gray-200',
-                )}>
-                Public Comment
+                onClick={() => {
+                  setReplyTo(null);
+                  setEditingComment(null);
+                  setText('');
+                }}
+                className="text-xs font-bold text-red-500"
+              >
+                Cancel
               </button>
             </div>
           )}
-          <button
-            type="submit"
-            disabled={loading || !text.trim()}
-            className="ml-auto p-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50">
-            <IoSend size={18} />
-          </button>
-        </div>
-      </form>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder={replyTo ? 'Write a reply...' : 'Add a private note or public comment...'}
+            className="w-full bg-transparent border-none focus:ring-0 text-sm text-gray-900 placeholder-gray-400 resize-none h-20"
+          />
+          <div className="flex justify-between items-center mt-2">
+            {!replyTo && !editingComment && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(false)}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all',
+                    !isPublic
+                      ? 'bg-black text-white'
+                      : 'bg-white text-gray-400 border border-gray-200',
+                  )}
+                >
+                  Private Note
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(true)}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all',
+                    isPublic ? 'bg-black text-white' : 'bg-white text-gray-400 border border-gray-200',
+                  )}
+                >
+                  Public Comment
+                </button>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading || !text.trim()}
+              className="ml-auto p-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+            >
+              <IoSend size={18} />
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="space-y-6">
         {comments
