@@ -21,10 +21,10 @@ jobs:
         with:
           node-version: 18
           cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: mobile/package.json
       - name: Install Dependencies
         working-directory: ./mobile
-        run: npm ci
+        run: npm install
       - name: Setup Java
         uses: actions/setup-java@v4
         with:

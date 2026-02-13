@@ -39,4 +39,9 @@ export class GetNearbyDto {
   @IsOptional()
   @IsString({ message: 'Query (q) must be a string' })
   q?: string;
+
+  @ApiPropertyOptional({ description: 'Weights for smart discovery', example: 'culture:10' })
+  @IsOptional()
+  @IsString({ message: 'Weights must be a string' })
+  weights?: string;
 }

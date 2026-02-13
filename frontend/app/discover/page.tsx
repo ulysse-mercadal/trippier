@@ -34,8 +34,15 @@ export default function DiscoverPage() {
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [weights, setWeights] = useState('culture:5,nature:5,food:5');
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const selectedPoiRef = useRef<POI | null>(null);
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
+
+  useEffect(() => {
+    selectedPoiRef.current = selectedPoi;
+  }, [selectedPoi]);
+  const [hoveredPoi, setHoveredPoi] = useState<POI | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
   const lastFetchedCoords = useRef<{ lat: number; lng: number } | null>(null);
@@ -125,11 +132,11 @@ export default function DiscoverPage() {
     return [focusedPoi, ...searchResults.filter(p => p.place_id !== focusedPoi.place_id)];
   }, [searchResults, focusedPoi]);
 
-  const fetchNearby = useCallback(async (lat: number, lng: number) => {
+  const fetchNearby = useCallback(async (lat: number, lng: number, currentWeights: string) => {
     try {
       setLoading(true);
       const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 5 },
+        params: { lat, lng, radius: 5, weights: currentWeights },
       });
       setNearbyPois(response.data);
     } catch (error) {
@@ -139,30 +146,33 @@ export default function DiscoverPage() {
     }
   }, []);
 
-  const fetchSearch = useCallback(async (lat: number, lng: number, q: string) => {
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
-    try {
-      setLoading(true);
-      const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: 50, q },
-      });
-      setSearchResults(response.data);
-    } catch (error) {
-      console.error('Failed to fetch search results:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchSearch = useCallback(
+    async (lat: number, lng: number, q: string, currentWeights: string) => {
+      if (!q) {
+        setSearchResults([]);
+        return;
+      }
+      try {
+        setLoading(true);
+        const response = await client.get('/discover/nearby', {
+          params: { lat, lng, radius: 50, q, weights: currentWeights },
+        });
+        setSearchResults(response.data);
+      } catch (error) {
+        console.error('Failed to fetch search results:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   const handleSearch = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text);
+      fetchSearch(lastCoords.current.lat, lastCoords.current.lng, text, weights);
     },
-    [fetchSearch],
+    [fetchSearch, weights],
   );
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
@@ -181,23 +191,45 @@ export default function DiscoverPage() {
   const handleMapMove = useCallback(
     (lat: number, lng: number) => {
       lastCoords.current = { lat, lng };
+      if (selectedPoiRef.current) {
+        return;
+      }
       const shouldFetch =
         !lastFetchedCoords.current ||
         calculateDistance(lat, lng, lastFetchedCoords.current.lat, lastFetchedCoords.current.lng) >
           0.5;
       if (shouldFetch) {
         lastFetchedCoords.current = { lat, lng };
-        fetchNearby(lat, lng);
+        fetchNearby(lat, lng, weights);
         if (searchQuery) {
-          fetchSearch(lat, lng, searchQuery);
+          fetchSearch(lat, lng, searchQuery, weights);
         }
+      }
+    },
+    [fetchNearby, fetchSearch, searchQuery, weights],
+  );
+
+  const handleWeightsChange = useCallback(
+    (newWeights: string) => {
+      setWeights(newWeights);
+      fetchNearby(lastCoords.current.lat, lastCoords.current.lng, newWeights);
+      if (searchQuery) {
+        fetchSearch(lastCoords.current.lat, lastCoords.current.lng, searchQuery, newWeights);
       }
     },
     [fetchNearby, fetchSearch, searchQuery],
   );
 
   const handlePoiSelect = useCallback(async (poi: POI | null) => {
+    if (
+      poi &&
+      selectedPoiRef.current &&
+      (poi.place_id || poi.id) === (selectedPoiRef.current.place_id || selectedPoiRef.current.id)
+    ) {
+      return;
+    }
     setSelectedPoi(poi);
+    selectedPoiRef.current = poi;
     if (poi) {
       setIsExpanded(true);
       setFocusedPoi(poi);
@@ -215,16 +247,17 @@ export default function DiscoverPage() {
           },
         });
         setSelectedPoi(prev =>
-          prev
+          prev && (prev.place_id || prev.id) === (poi.place_id || poi.id)
             ? {
                 ...prev,
-                description: response.data.description,
-                wikipediaUrl: response.data.wikipediaUrl,
-                wikivoyageUrl: response.data.wikivoyageUrl,
-                officialWebsite: response.data.website,
-                phoneNumber: response.data.phoneNumber,
+                description: response.data.description ?? prev.description,
+                wikivoyageUrl: response.data.wikivoyageUrl ?? prev.wikivoyageUrl,
+                officialWebsite: response.data.website ?? prev.officialWebsite,
+                phoneNumber: response.data.phoneNumber ?? prev.phoneNumber,
+                lat: response.data.lat ?? prev.lat,
+                lng: response.data.lng ?? prev.lng,
               }
-            : null,
+            : prev,
         );
       } catch (error) {
         console.error('Failed to fetch POI details:', error);
@@ -240,6 +273,22 @@ export default function DiscoverPage() {
     setFocusedPoi(poi);
   }, []);
 
+  const handleHover = useCallback((poi: POI | null) => {
+    setHoveredPoi(poi);
+  }, []);
+
+  const targetLocation = React.useMemo(() => {
+    const poi = focusedPoi || selectedPoi;
+    if (!poi) {
+      return null;
+    }
+    return {
+      lat: typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat,
+      lng: typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng,
+      id: poi.place_id,
+    };
+  }, [focusedPoi, selectedPoi]);
+
   return (
     <div className="relative w-full h-full bg-white overflow-hidden">
       <FilterBar
@@ -254,12 +303,15 @@ export default function DiscoverPage() {
         onPoiSelect={handlePoiSelect}
         selectedPoi={selectedPoi}
         onZoom={handleZoomToPoi}
+        onHover={handleHover}
         focusedPoi={focusedPoi}
         maps={maps}
         onDeleteMap={handleDeleteMap}
         onUpdateMap={handleUpdateMap}
         onMapCreated={fetchMaps}
         onMapsRefresh={fetchMaps}
+        weights={weights}
+        onWeightsChange={handleWeightsChange}
       />
       <motion.div
         className="absolute z-10 overflow-hidden shadow-2xl"
@@ -276,31 +328,8 @@ export default function DiscoverPage() {
           onCenterChanged={handleMapMove}
           mapPois={visibleMapPois}
           onPoiClick={handlePoiSelect}
-          targetLocation={
-            focusedPoi
-              ? {
-                  lat:
-                    typeof focusedPoi.lat === 'string'
-                      ? parseFloat(focusedPoi.lat)
-                      : focusedPoi.lat,
-                  lng:
-                    typeof focusedPoi.lng === 'string'
-                      ? parseFloat(focusedPoi.lng)
-                      : focusedPoi.lng,
-                }
-              : selectedPoi
-                ? {
-                    lat:
-                      typeof selectedPoi.lat === 'string'
-                        ? parseFloat(selectedPoi.lat)
-                        : selectedPoi.lat,
-                    lng:
-                      typeof selectedPoi.lng === 'string'
-                        ? parseFloat(selectedPoi.lng)
-                        : selectedPoi.lng,
-                  }
-                : null
-          }
+          hoveredPoi={hoveredPoi}
+          targetLocation={targetLocation}
         />
       </motion.div>
     </div>

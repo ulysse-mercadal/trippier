@@ -58,34 +58,32 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          bun-version: latest
       - name: Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Generate Prisma Client
         working-directory: ./backend
-        run: npx prisma generate
+        run: bunx prisma generate
       - name: Run Migrations
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
-        run: npx prisma db push
+        run: bunx prisma db push
       - name: Seed Database
         working-directory: ./backend
         env:
           DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
-        run: npx prisma db seed
+        run: bunx prisma db seed
       - name: Lint
         working-directory: ./backend
-        run: npm run lint
+        run: bun run lint
       - name: Build
         working-directory: ./backend
-        run: npm run build
+        run: bun run build
       - name: Start Backend
         working-directory: ./backend
         env:
@@ -93,11 +91,11 @@ jobs:
           JWT_SECRET: super-secret-test-key
           PORT: 3001
         run: |
-          npm run start:prod &
-          npx wait-on http://localhost:3001
+          bun run start:prod &
+          bunx wait-on http://localhost:3001
       - name: Run Tests (Postman)
         working-directory: ./backend
-        run: npm run test:e2e:all
+        run: bun run test:e2e:all
 
   frontend:
     needs: changes
@@ -105,21 +103,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          bun-version: latest
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Lint
         working-directory: ./frontend
-        run: npm run lint
+        run: bun run lint
       - name: Build
         working-directory: ./frontend
-        run: npm run build
+        run: bun run build
         env:
           API_URL: http://localhost:3001
 
@@ -129,18 +125,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 18
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+          bun-version: latest
       - name: Install dependencies
         working-directory: ./mobile
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Lint
         working-directory: ./mobile
-        run: npm run lint
+        run: bun run lint
       - name: Setup Java
         uses: actions/setup-java@v4
         with:

@@ -1,0 +1,165 @@
+{
+	"info": {
+		"_postman_id": "c7a8b6a7-c7a8-c7a8-c7a8-c7a8b6a7b6a7",
+		"name": "Trippier Comments Test",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Setup: Login User A",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const jsonData = pm.response.json();",
+							"pm.environment.set(\"user_a_token\", jsonData.access_token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"email\": \"admin@trippier.com\", \"password\": \"admin123\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/login",
+					"host": ["{{baseUrl}}"],
+					"path": ["auth", "login"]
+				}
+			}
+		},
+		{
+			"name": "User A: Create Private Note",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Note Created\", () => pm.response.to.have.status(201));",
+							"const jsonData = pm.response.json();",
+							"pm.environment.set(\"private_note_id\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+				},
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"text\": \"This is my private note\", \"isPublic\": false, \"poiId\": \"ChIJLU7jZClu5kcR4PcOoO6p3I0\", \"poiName\": \"Eiffel Tower\", \"poiLat\": 48.8584, \"poiLng\": 2.2945}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/comments",
+					"host": ["{{baseUrl}}"],
+					"path": ["comments"]
+				}
+			}
+		},
+		{
+			"name": "User A: Create Public Comment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Comment Created\", () => pm.response.to.have.status(201));",
+							"const jsonData = pm.response.json();",
+							"pm.environment.set(\"public_comment_id\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+				},
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"text\": \"Great place!\", \"isPublic\": true, \"poiId\": \"ChIJLU7jZClu5kcR4PcOoO6p3I0\", \"poiName\": \"Eiffel Tower\", \"poiLat\": 48.8584, \"poiLng\": 2.2945}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/comments",
+					"host": ["{{baseUrl}}"],
+					"path": ["comments"]
+				}
+			}
+		},
+		{
+			"name": "User A: Reply to Public Comment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Reply Created\", () => pm.response.to.have.status(201));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+				},
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"text\": \"I agree!\", \"isPublic\": true, \"poiId\": \"ChIJLU7jZClu5kcR4PcOoO6p3I0\", \"poiName\": \"Eiffel Tower\", \"poiLat\": 48.8584, \"poiLng\": 2.2945, \"parentId\": {{public_comment_id}} }"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/comments",
+					"host": ["{{baseUrl}}"],
+					"path": ["comments"]
+				}
+			}
+		},
+		{
+			"name": "User A: Get Comments for POI",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status OK\", () => pm.response.to.have.status(200));",
+							"const jsonData = pm.response.json();",
+							"pm.test(\"Contains private and public\", () => {",
+							"  pm.expect(jsonData.length).to.be.at.least(2);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [{ "key": "token", "value": "{{user_a_token}}", "type": "string" }]
+				},
+				"method": "GET",
+				"url": {
+					"raw": "{{baseUrl}}/comments?poiId=ChIJLU7jZClu5kcR4PcOoO6p3I0",
+					"host": ["{{baseUrl}}"],
+					"path": ["comments"],
+					"query": [{ "key": "poiId", "value": "ChIJLU7jZClu5kcR4PcOoO6p3I0" }]
+				}
+			}
+		}
+	]
+}

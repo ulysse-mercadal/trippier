@@ -11,6 +11,7 @@ import { Controller, Get, Query, UsePipes, ValidationPipe } from '@nestjs/common
 import { DiscoverService } from './discover.service';
 import { GetNearbyDto } from './dto/get-nearby.dto';
 import { GetDetailsDto } from './dto/get-details.dto';
+import { SmartDiscoveryDto } from './dto/smart-discovery.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('discover')
@@ -24,7 +25,22 @@ export class DiscoverController {
   @Get('nearby')
   @UsePipes(new ValidationPipe({ transform: true }))
   async getNearby(@Query() query: GetNearbyDto) {
-    return this.discoverService.findNearbyPOIs(query.lat, query.lng, query.radius, query.q);
+    return this.discoverService.findNearbyPOIs(
+      query.lat,
+      query.lng,
+      query.radius,
+      query.q,
+      query.weights,
+    );
+  }
+
+  @ApiOperation({ summary: 'Smart discovery from Wikivoyage' })
+  @ApiResponse({ status: 200, description: 'List of extracted POIs from Wikivoyage.' })
+  @ApiResponse({ status: 400, description: 'Validation failed.' })
+  @Get('smart')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async smartDiscovery(@Query() query: SmartDiscoveryDto) {
+    return this.discoverService.smartDiscovery(query.city, query.weights);
   }
 
   @ApiOperation({ summary: 'Get POI details' })

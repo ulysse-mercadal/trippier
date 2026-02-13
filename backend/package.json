@@ -11,16 +11,17 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/src/main",
+    "start:prod": "bun dist/src/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:debug": "bun --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:e2e:cli": "npx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
-    "test:e2e:maps": "npx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
-    "test:e2e:all": "npx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Discover.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && npx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json"
+    "test:e2e:cli": "bunx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
+    "test:e2e:maps": "bunx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
+    "test:e2e:comments": "bunx newman run ./postman/Trippier_Comments.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json",
+    "test:e2e:all": "bunx newman run ./postman/Trippier_Auth.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && bunx newman run ./postman/Trippier_Discover.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && bunx newman run ./postman/Trippier_Maps.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json && bunx newman run ./postman/Trippier_Comments.postman_collection.json -e ./postman/Trippier_Env.postman_environment.json"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
@@ -34,7 +35,7 @@
     "@nestjs/swagger": "^11.2.5",
     "@prisma/client": "^5.22.0",
     "axios": "^1.13.2",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "passport": "^0.7.0",
@@ -51,6 +52,7 @@
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
     "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^3.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
@@ -93,6 +95,6 @@
     "testEnvironment": "node"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "bun prisma/seed.ts"
   }
 }

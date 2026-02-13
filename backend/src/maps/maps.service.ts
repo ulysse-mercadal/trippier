@@ -13,7 +13,7 @@ import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
 import { AddPoiDto } from './dto/add-poi.dto';
 import { UpdatePoiDto } from './dto/update-poi.dto';
-import { Map as PrismaMap, PointOfInterest } from '@prisma/client';
+import { Map as PrismaMap, PointOfInterest, Prisma } from '@prisma/client';
 
 interface PrismaError {
   code?: string;
@@ -471,47 +471,34 @@ export class MapsService {
     lng: number,
     radius: number = 1,
   ): Promise<(PointOfInterest & { place_id: string; distance: number })[]> {
-    const mapPois = await this.prisma.mapPoi.findMany({
-      where: {
-        map: {
-          userId,
-        },
-      },
-      include: {
-        poi: true,
-      },
-    });
-    const uniquePois = new Map<string, PointOfInterest>();
-    mapPois.forEach(mp => {
-      if (!uniquePois.has(mp.poiId)) {
-        uniquePois.set(mp.poiId, mp.poi);
-      }
-    });
+    const pois = await this.prisma.$queryRaw<(PointOfInterest & { distance: number })[]>(
+      Prisma.sql`
+        SELECT DISTINCT ON (poi.id)
+          poi.*,
+          (6371 * acos(
+            cos(radians(${lat})) * cos(radians(poi.lat)) *
+            cos(radians(poi.lng) - radians(${lng})) +
+            sin(radians(${lat})) * sin(radians(poi.lat))
+          )) AS distance
+        FROM "PointOfInterest" poi
+        JOIN "MapPoi" mp ON poi.id = mp."poiId"
+        JOIN "Map" m ON mp."mapId" = m.id
+        WHERE m."userId" = ${userId}
+        AND (6371 * acos(
+          cos(radians(${lat})) * cos(radians(poi.lat)) *
+          cos(radians(poi.lng) - radians(${lng})) +
+          sin(radians(${lat})) * sin(radians(poi.lat))
+        )) <= ${radius}
+        ORDER BY poi.id, distance ASC
+      `,
+    );
 
-    const poisWithDistance = Array.from(uniquePois.values()).map(poi => {
-      const distance = this.calculateDistance(lat, lng, poi.lat, poi.lng);
-      return {
+    return pois
+      .map(poi => ({
         ...poi,
         place_id: poi.id,
-        distance,
-      };
-    });
-    return poisWithDistance
-      .filter(p => p.distance <= radius)
+        distance: Number(poi.distance),
+      }))
       .sort((a, b) => a.distance - b.distance);
-  }
-
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * (Math.PI / 180)) *
-        Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
   }
 }

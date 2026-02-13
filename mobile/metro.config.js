@@ -18,6 +18,9 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const config = {
   resolver: {
     blockList: /.*\/android\/build\/.*/,
+    unstable_enablePackageExports: true,
+    unstable_conditionNames: ['react-native', 'browser', 'import', 'require'],
+    resolverMainFields: ['react-native', 'browser', 'module', 'main'],
   },
 };
 

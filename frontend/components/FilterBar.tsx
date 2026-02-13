@@ -31,12 +31,15 @@ interface FilterBarProps {
   onPoiSelect?: (poi: POI | null) => void;
   selectedPoi?: POI | null;
   onZoom?: (poi: POI) => void;
+  onHover?: (poi: POI | null) => void;
   focusedPoi?: POI | null;
   maps?: Map[];
   onDeleteMap?: (id: number) => void;
   onUpdateMap?: (id: number, data: Partial<Map>) => void;
   onMapCreated?: () => void;
   onMapsRefresh?: () => void;
+  weights?: string;
+  onWeightsChange?: (weights: string) => void;
 }
 
 export default function FilterBar({
@@ -51,12 +54,15 @@ export default function FilterBar({
   onPoiSelect,
   selectedPoi,
   onZoom,
+  onHover,
   focusedPoi,
   maps = [],
   onDeleteMap,
   onUpdateMap,
   onMapCreated,
   onMapsRefresh,
+  weights = '',
+  onWeightsChange,
 }: FilterBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
@@ -266,9 +272,12 @@ export default function FilterBar({
                 onPoiSelect={onPoiSelect}
                 isSmallScreen={isSmallScreen}
                 onZoom={handleZoom}
+                onHover={onHover}
                 focusedPoi={focusedPoi}
                 onMapsChange={onMapsRefresh}
                 maps={maps}
+                weights={weights}
+                onWeightsChange={onWeightsChange}
               />
             )}
           </AnimatePresence>

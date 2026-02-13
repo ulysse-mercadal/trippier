@@ -43,7 +43,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storageUser = localStorage.getItem('@Trippier:user');
       if (storageToken && storageUser) {
         try {
-          client.defaults.headers.common.Authorization = `Bearer ${storageToken}`;
           const response = await client.get('/auth/me');
           setUser(response.data);
           setToken(storageToken);
@@ -69,7 +68,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { access_token, user: userData } = response.data;
     setToken(access_token);
     setUser(userData);
-    client.defaults.headers.common.Authorization = `Bearer ${access_token}`;
     localStorage.setItem('@Trippier:token', access_token);
     localStorage.setItem('@Trippier:user', JSON.stringify(userData));
     router.push('/discover');
@@ -85,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('@Trippier:user');
     setToken(null);
     setUser(null);
-    delete client.defaults.headers.common.Authorization;
     router.push('/');
   }
 

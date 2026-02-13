@@ -43,8 +43,8 @@ make up
 
 ```bash
 cd mobile
-npm install
-npm start
+bun install
+bun start
 ```
 
 _Note: Run `adb reverse tcp:3001 tcp:3001` to connect your phone to the API._

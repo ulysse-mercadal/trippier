@@ -75,9 +75,11 @@ export default function MapSelectionModal({
   }, []);
 
   useEffect(() => {
-    if (isOpen && poi && token) {
+    if (isOpen && poi) {
       setIsVisible(true);
-      fetchMapsAndStatus();
+      if (token) {
+        fetchMapsAndStatus();
+      }
     } else {
       const timer = setTimeout(() => setIsVisible(false), 300);
       return () => clearTimeout(timer);
@@ -144,46 +146,67 @@ export default function MapSelectionModal({
             <IoClose size={24} />
           </button>
         </div>
-        <div className="mb-4 shrink-0">
-          <CreateMapForm onMapCreated={handleMapCreated} />
-        </div>
-        <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+
+        {!token ? (
+          <div className="flex flex-col items-center py-4 text-center">
+            <p className="text-sm text-gray-600 mb-6 px-4">
+              Join the community to save your favorite places and plan your next trips.
+            </p>
+            <button
+              onClick={() => (window.location.href = '/')}
+              className="w-full py-4 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest shadow-lg active:scale-95">
+              Login or Register
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 shrink-0">
+              <CreateMapForm onMapCreated={handleMapCreated} />
             </div>
-          ) : maps.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No maps found. Create one first!</div>
-          ) : (
-            maps.map(map => (
-              <button
-                key={map.id}
-                onClick={() => toggleMap(map)}
-                className={`w-full p-3 rounded-xl flex items-center space-x-3 transition-all border ${
-                  map.hasPoi
-                    ? 'bg-black text-white border-black'
-                    : 'bg-gray-50 text-gray-900 border-gray-100 hover:bg-gray-100'
-                }`}>
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${
-                    map.hasPoi ? 'bg-white/20' : 'bg-white'
-                  }`}>
-                  {map.icon || '🌍'}
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-2 pr-1">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
                 </div>
-                <div className="flex-1 text-left min-w-0">
-                  <div className="font-bold truncate">{map.title}</div>
-                  {map.description && (
+              ) : maps.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No maps found. Create one first!
+                </div>
+              ) : (
+                maps.map(map => (
+                  <button
+                    key={map.id}
+                    onClick={() => toggleMap(map)}
+                    className={`w-full p-3 rounded-xl flex items-center space-x-3 transition-all border ${
+                      map.hasPoi
+                        ? 'bg-black text-white border-black'
+                        : 'bg-gray-50 text-gray-900 border-gray-100 hover:bg-gray-100'
+                    }`}>
                     <div
-                      className={`text-xs truncate ${map.hasPoi ? 'text-gray-300' : 'text-gray-500'}`}>
-                      {map.description}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 ${
+                        map.hasPoi ? 'bg-white/20' : 'bg-white'
+                      }`}>
+                      {map.icon || '🌍'}
                     </div>
-                  )}
-                </div>
-                {map.hasPoi && <IoCheckmark size={20} className="shrink-0" />}
-              </button>
-            ))
-          )}
-        </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="font-bold truncate">{map.title}</div>
+                      {map.description && (
+                        <div
+                          className={`text-xs truncate ${
+                            map.hasPoi ? 'text-gray-300' : 'text-gray-500'
+                          }`}>
+                          {map.description}
+                        </div>
+                      )}
+                    </div>
+                    {map.hasPoi && <IoCheckmark size={20} className="shrink-0" />}
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+
         <div className="mt-4 pt-4 border-t border-gray-100 shrink-0">
           <button
             onClick={onClose}

@@ -7,6 +7,23 @@
 //
 // **************************************************************************
 
+export interface Comment {
+  id: number;
+  text: string;
+  isPublic: boolean;
+  hidden: boolean;
+  userId: number;
+  user: {
+    id: number;
+    name: string;
+  };
+  poiId: string;
+  parentId?: number | null;
+  replies?: Comment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface POI {
   id?: string;
   place_id: string;
@@ -24,6 +41,7 @@ export interface POI {
   officialWebsite?: string | null;
   phoneNumber?: string | null;
   description?: string | null;
+  comments?: Comment[];
 }
 
 export interface Map {
