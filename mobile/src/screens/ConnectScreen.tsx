@@ -9,31 +9,33 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useTheme } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 
 export default function ConnectScreen() {
-  const { colors } = useTheme();
   const { user, logout } = useAuth();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
-      {user && (
-        <View style={styles.infoContainer}>
-          <Text style={[styles.label, { color: '#888' }]}>Email</Text>
-          <Text style={[styles.value, { color: colors.text }]}>{user.email}</Text>
-          {user.name && (
-            <>
-              <Text style={[styles.label, { color: '#888' }]}>Name</Text>
-              <Text style={[styles.value, { color: colors.text }]}>{user.name}</Text>
-            </>
-          )}
-        </View>
-      )}
-      <TouchableOpacity style={[styles.logoutButton, { borderColor: '#FF4444' }]} onPress={logout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Profile</Text>
+        {user && (
+          <View style={styles.infoContainer}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
+              <Text style={styles.value}>{user.email}</Text>
+            </View>
+            {user.name && (
+              <View style={styles.field}>
+                <Text style={styles.label}>Name</Text>
+                <Text style={styles.value}>{user.name}</Text>
+              </View>
+            )}
+          </View>
+        )}
+        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -41,36 +43,48 @@ export default function ConnectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    backgroundColor: '#FFF',
+    padding: 24,
     justifyContent: 'center',
   },
+  content: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 40,
     textAlign: 'center',
+    color: '#000',
   },
   infoContainer: {
     marginBottom: 40,
   },
+  field: {
+    marginBottom: 24,
+  },
   label: {
     fontSize: 14,
+    color: '#9CA3AF',
     marginBottom: 4,
   },
   value: {
     fontSize: 18,
-    marginBottom: 20,
     fontWeight: '500',
+    color: '#000',
   },
   logoutButton: {
-    height: 50,
+    height: 48,
     borderWidth: 1,
+    borderColor: '#EF4444',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoutText: {
-    color: '#FF4444',
+    color: '#EF4444',
     fontSize: 16,
     fontWeight: 'bold',
   },

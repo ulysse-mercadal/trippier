@@ -62,25 +62,15 @@ export default function PoiCard({ poi, onPress, onZoom, isHighlighted }: PoiCard
             )}
           </View>
           <View style={styles.row}>
-            <View style={styles.distanceBadge}>
-              <Text style={styles.distanceText}>
-                {poi.distance < 1
-                  ? `${(poi.distance * 1000).toFixed(0)}m`
-                  : `${poi.distance.toFixed(1)}km`}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.ratingContainer}>
-            <View style={styles.ratingItem}>
-              <Ionicons name="star" size={12} color="#F59E0B" />
-              <Text style={styles.ratingText}>{poi.rating || 'N/A'}</Text>
-            </View>
-            <View style={styles.ratingItem}>
-              <Ionicons name="people" size={12} color="#9CA3AF" />
-              <Text style={styles.reviewCount}>
-                ({poi.user_ratings_total?.toLocaleString() || 0})
-              </Text>
-            </View>
+            {poi.distance !== undefined && (
+              <View style={styles.distanceBadge}>
+                <Text style={styles.distanceText}>
+                  {poi.distance < 1
+                    ? `${(poi.distance * 1000).toFixed(0)}m`
+                    : `${poi.distance.toFixed(1)}km`}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </Pressable>
@@ -136,25 +126,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#3B82F6',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  ratingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  ratingText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#F59E0B',
-  },
-  reviewCount: {
-    fontSize: 10,
-    fontWeight: 'medium',
-    color: '#9CA3AF',
   },
 });

@@ -7,9 +7,17 @@
 //
 // **************************************************************************
 
-import React, { forwardRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { forwardRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { POI } from '../lib/types';
 import PoiCard, { LayoutInfo } from './PoiCard';
 
@@ -22,7 +30,18 @@ interface PoiListViewProps {
   onZoom: (poi: POI) => void;
   scrollHandler?: any;
   highlightedPoiId?: string | null;
+  weights?: string;
+  onWeightsChange?: (weights: string) => void;
 }
+
+const CATEGORIES = [
+  { id: 'culture', name: 'Culture', icon: 'museum-outline' },
+  { id: 'food', name: 'Food', icon: 'restaurant-outline' },
+  { id: 'nature', name: 'Nature', icon: 'leaf-outline' },
+  { id: 'nightlife', name: 'Nightlife', icon: 'beer-outline' },
+  { id: 'shopping', name: 'Shopping', icon: 'cart-outline' },
+  { id: 'activities', name: 'Activities', icon: 'walk-outline' },
+];
 
 const PoiListView = forwardRef<any, PoiListViewProps>(
   (
@@ -35,9 +54,38 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
       onZoom,
       scrollHandler,
       highlightedPoiId,
+      weights = '',
+      onWeightsChange,
     },
     ref,
   ) => {
+    const currentWeights = useMemo(() => {
+      const map: Record<string, number> = {};
+      weights.split(',').forEach(w => {
+        const [k, v] = w.split(':');
+        if (k) {
+          map[k] = parseFloat(v) || 0;
+        }
+      });
+      return map;
+    }, [weights]);
+
+    const toggleCategory = (id: string) => {
+      if (!onWeightsChange) {
+        return;
+      }
+      const newWeights = { ...currentWeights };
+      if (newWeights[id]) {
+        delete newWeights[id];
+      } else {
+        newWeights[id] = 10;
+      }
+      const weightsStr = Object.entries(newWeights)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(',');
+      onWeightsChange(weightsStr);
+    };
+
     return (
       <Animated.ScrollView
         ref={ref}
@@ -48,6 +96,35 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
         <View style={styles.header}>
           <Text style={styles.title}>Explore</Text>
         </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoriesScroll}
+          contentContainerStyle={styles.categoriesContent}>
+          {CATEGORIES.map(cat => (
+            <TouchableOpacity
+              key={cat.id}
+              onPress={() => toggleCategory(cat.id)}
+              style={[
+                styles.categoryButton,
+                currentWeights[cat.id] ? styles.categoryActive : styles.categoryInactive,
+              ]}>
+              <Ionicons
+                name={cat.icon}
+                size={16}
+                color={currentWeights[cat.id] ? '#FFF' : '#374151'}
+              />
+              <Text
+                style={[
+                  styles.categoryText,
+                  currentWeights[cat.id] ? styles.textWhite : styles.textGray,
+                ]}>
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {searchQuery ? (
           <View style={styles.section}>
@@ -84,7 +161,7 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
             ))
           ) : loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3B82F6" />
+              <ActivityIndicator size="large" color="#000" />
             </View>
           ) : (
             <Text style={styles.emptyText}>No places found nearby.</Text>
@@ -96,18 +173,16 @@ const PoiListView = forwardRef<any, PoiListViewProps>(
   },
 );
 
-export default PoiListView;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
   contentContainer: {
-    paddingHorizontal: 16,
     paddingTop: 16,
   },
   header: {
+    paddingHorizontal: 16,
     marginBottom: 16,
   },
   title: {
@@ -115,7 +190,42 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#111827',
   },
+  categoriesScroll: {
+    marginBottom: 24,
+  },
+  categoriesContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  categoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+  },
+  categoryActive: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  categoryInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#E5E7EB',
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  textWhite: {
+    color: '#FFF',
+  },
+  textGray: {
+    color: '#374151',
+  },
   section: {
+    paddingHorizontal: 16,
     marginBottom: 24,
   },
   sectionTitle: {
@@ -138,3 +248,5 @@ const styles = StyleSheet.create({
     height: 80,
   },
 });
+
+export default PoiListView;

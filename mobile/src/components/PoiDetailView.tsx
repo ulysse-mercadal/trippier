@@ -7,7 +7,7 @@
 //
 // **************************************************************************
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,10 +17,11 @@ import {
   Dimensions,
   Image,
   Clipboard,
+  ActivityIndicator,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { POI } from '../lib/types';
+import { POI, Map } from '../lib/types';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -29,12 +30,19 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { LayoutInfo } from './PoiCard';
+import CommentSection from './CommentSection';
+import MapSelectionModal from './MapSelectionModal';
+import CreateMapModal from './CreateMapModal';
+import { useAuth } from '../context/AuthContext';
 
 interface PoiDetailViewProps {
   selectedPoi: POI;
   onClose: () => void;
   loading: boolean;
   initialLayout?: LayoutInfo;
+  maps?: Map[];
+  onMapsChange?: () => void;
+  onMapClick?: (mapId: number) => void;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -44,11 +52,20 @@ export default function PoiDetailView({
   onClose,
   loading,
   initialLayout,
+  maps = [],
+  onMapsChange,
+  onMapClick,
 }: PoiDetailViewProps) {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Animation values
+  const savedInMaps = useMemo(() => {
+    return maps.filter(m => m.pois?.some(p => p.place_id === selectedPoi.place_id));
+  }, [maps, selectedPoi.place_id]);
+
   const top = useSharedValue(initialLayout ? initialLayout.y : SCREEN_HEIGHT);
   const left = useSharedValue(initialLayout ? initialLayout.x : 0);
   const width = useSharedValue(initialLayout ? initialLayout.width : SCREEN_WIDTH);
@@ -68,7 +85,6 @@ export default function PoiDetailView({
   });
 
   useEffect(() => {
-    // Start animation on mount
     opacity.value = withTiming(1, { duration: 100 });
     top.value = withSpring(0, { damping: 15, stiffness: 90 });
     left.value = withSpring(0, { damping: 15, stiffness: 90 });
@@ -118,6 +134,17 @@ export default function PoiDetailView({
     Linking.openURL(url);
   };
 
+  const handleOpenCreateModal = useCallback(() => {
+    setIsSaveModalOpen(false);
+    setTimeout(() => setIsCreateModalOpen(true), 300);
+  }, []);
+
+  const handleMapCreated = useCallback(() => {
+    setIsCreateModalOpen(false);
+    onMapsChange?.();
+    setTimeout(() => setIsSaveModalOpen(true), 500);
+  }, [onMapsChange]);
+
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
       <ScrollView
@@ -126,10 +153,34 @@ export default function PoiDetailView({
         showsVerticalScrollIndicator={false}
         bounces={true}
         overScrollMode="always">
-        <TouchableOpacity style={styles.backButton} onPress={handleClose}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-          <Text style={styles.backText}>Back</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backButton} onPress={handleClose}>
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+
+          {user && (
+            <TouchableOpacity onPress={() => setIsSaveModalOpen(true)} style={styles.saveButton}>
+              <Ionicons
+                name={savedInMaps.length > 0 ? 'bookmark' : 'bookmark-outline'}
+                size={18}
+                color="#FFF"
+              />
+              <Text style={styles.saveButtonText}>{savedInMaps.length > 0 ? 'Saved' : 'Save'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {!user && (
+          <View style={styles.loginPrompt}>
+            <Text style={styles.loginPromptText}>
+              Login to save this place to your maps and plan your trip.
+            </Text>
+            <TouchableOpacity style={styles.loginAction}>
+              <Text style={styles.loginActionText}>Login or Register</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {selectedPoi.thumbnail && !imgError && (
           <View style={styles.imageContainer}>
             <Image
@@ -140,21 +191,7 @@ export default function PoiDetailView({
             />
           </View>
         )}
-
         <Text style={styles.name}>{selectedPoi.name}</Text>
-        <View style={styles.ratingRow}>
-          <View style={styles.ratingItem}>
-            <Ionicons name="star" size={16} color="#F59E0B" />
-            <Text style={styles.ratingText}>{selectedPoi.rating || 'N/A'}</Text>
-          </View>
-          <View style={styles.ratingItem}>
-            <Ionicons name="people" size={16} color="#9CA3AF" />
-            <Text style={styles.reviewText}>
-              {selectedPoi.user_ratings_total?.toLocaleString() || 0} reviews
-            </Text>
-          </View>
-        </View>
-
         {selectedPoi.description ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -167,10 +204,9 @@ export default function PoiDetailView({
           </View>
         ) : loading ? (
           <View style={styles.loadingPlaceholder}>
-            <Text>Loading details...</Text>
+            <ActivityIndicator size="small" color="#9CA3AF" />
           </View>
         ) : null}
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="globe-outline" size={20} color="#9CA3AF" />
@@ -234,12 +270,55 @@ export default function PoiDetailView({
             )}
           </View>
         </View>
+
+        {savedInMaps.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="bookmark-outline" size={20} color="#9CA3AF" />
+              <Text style={styles.sectionTitle}>SAVED IN YOUR MAPS</Text>
+            </View>
+            <View style={styles.mapsList}>
+              {savedInMaps.map(map => (
+                <TouchableOpacity
+                  key={map.id}
+                  onPress={() => onMapClick?.(map.id)}
+                  style={styles.mapItem}>
+                  <View style={styles.mapIcon}>
+                    <Text style={styles.emojiText}>{map.icon || '🌍'}</Text>
+                  </View>
+                  <View style={styles.mapInfo}>
+                    <Text style={styles.mapTitle} numberOfLines={1}>
+                      {map.title}
+                    </Text>
+                    <Text style={styles.mapSubtitle}>{map.pois?.length || 0} locations</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>LOCATION</Text>
           <Text style={styles.addressText}>{selectedPoi.address}</Text>
         </View>
+        <CommentSection poi={selectedPoi} />
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <MapSelectionModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        poi={selectedPoi}
+        onMapsChange={onMapsChange}
+        onCreateNewMap={handleOpenCreateModal}
+      />
+
+      <CreateMapModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onMapCreated={handleMapCreated}
+      />
     </Animated.View>
   );
 }
@@ -259,16 +338,64 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     flexGrow: 1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
   },
   backText: {
     fontSize: 18,
     fontWeight: '900',
     color: '#111827',
     marginLeft: 8,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    gap: 8,
+  },
+  saveButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  loginPrompt: {
+    backgroundColor: '#F9FAFB',
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  loginPromptText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  loginAction: {
+    width: '100%',
+    paddingVertical: 12,
+    backgroundColor: '#000',
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  loginActionText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   imageContainer: {
     width: '100%',
@@ -289,27 +416,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 8,
     lineHeight: 34,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    gap: 16,
-  },
-  ratingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  reviewText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#9CA3AF',
   },
   section: {
     marginBottom: 32,
@@ -371,6 +477,46 @@ const styles = StyleSheet.create({
   phoneContent: {
     flex: 1,
     alignItems: 'flex-start',
+  },
+  mapsList: {
+    gap: 8,
+  },
+  mapItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 12,
+  },
+  mapIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  emojiText: {
+    fontSize: 20,
+  },
+  mapInfo: {
+    flex: 1,
+  },
+  mapTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  mapSubtitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
   },
   addressText: {
     fontSize: 14,

@@ -16,9 +16,10 @@ import {
   BackHandler,
   PermissionsAndroid,
   Platform,
+  Alert,
 } from 'react-native';
 import MapLibreGL from '@maplibre/maplibre-react-native';
-import { useTheme } from '@react-navigation/native';
+import { useTheme, useNavigation } from '@react-navigation/native';
 import {
   useSharedValue,
   withSpring,
@@ -51,6 +52,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const { token } = useAuth();
   const mapRef = useRef<any>(null);
   const [mapStyle, setMapStyle] = useState<any>(null);
@@ -90,9 +92,13 @@ export default function DiscoverScreen() {
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [focusedPoi, setFocusedPoi] = useState<POI | null>(null);
   const [selectedPoiLayout, setSelectedPoiLayout] = useState<LayoutInfo | undefined>(undefined);
-  const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
+  const hasCenteredRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [centerCoordinate, setCenterCoordinate] = useState<[number, number]>([2.2945, 48.8584]);
+  const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
+  const [weights, setWeights] = useState('culture:5,nature:5,food:5');
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
 
   const fetchMaps = useCallback(async () => {
     if (!token) {
@@ -105,9 +111,36 @@ export default function DiscoverScreen() {
       console.error('Failed to fetch maps:', error);
     }
   }, [token]);
+
   useEffect(() => {
     fetchMaps();
   }, [fetchMaps]);
+
+  const handleDeleteMap = async (id: number) => {
+    if (!token) {
+      return;
+    }
+    try {
+      await client.delete(`/maps/${id}`);
+      fetchMaps();
+    } catch (error) {
+      console.error('Failed to delete map:', error);
+      Alert.alert('Error', 'Failed to delete map.');
+    }
+  };
+
+  const handleUpdateMap = async (id: number, data: Partial<MapType>) => {
+    if (!token) {
+      return;
+    }
+    try {
+      await client.patch(`/maps/${id}`, data);
+      fetchMaps();
+    } catch (error) {
+      console.error('Failed to update map:', error);
+      Alert.alert('Error', 'Failed to update map.');
+    }
+  };
 
   const visibleMapPois = useMemo(() => {
     const poisMap = new Map<string, { poi: POI; mapIcon: string }>();
@@ -139,19 +172,22 @@ export default function DiscoverScreen() {
     [drawerTranslateY],
   );
 
-  const fetchNearby = useCallback(async (lat: number, lng: number, radius?: number) => {
-    try {
-      setLoading(true);
-      const response = await client.get('/discover/nearby', {
-        params: { lat, lng, radius: radius || 5 },
-      });
-      setNearbyPois(response.data);
-    } catch (error) {
-      console.error('Failed to fetch nearby POIs:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchNearby = useCallback(
+    async (lat: number, lng: number, currentWeights: string, radius?: number) => {
+      try {
+        setLoading(true);
+        const response = await client.get('/discover/nearby', {
+          params: { lat, lng, radius: radius || 5, weights: currentWeights },
+        });
+        setNearbyPois(response.data);
+      } catch (error) {
+        console.error('Failed to fetch nearby POIs:', error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   const requestLocationPermission = useCallback(async () => {
     if (Platform.OS === 'android') {
@@ -193,6 +229,7 @@ export default function DiscoverScreen() {
     setSearchQuery('');
     setSearchResults([]);
     filterBarRef.current?.blur();
+    setViewMode('search');
   }, []);
 
   useAnimatedReaction(
@@ -250,7 +287,7 @@ export default function DiscoverScreen() {
   });
 
   const fetchSearch = useCallback(
-    async (lat: number, lng: number, q: string) => {
+    async (lat: number, lng: number, q: string, currentWeights: string) => {
       if (!q) {
         setSearchResults([]);
         return;
@@ -258,7 +295,7 @@ export default function DiscoverScreen() {
       try {
         setLoading(true);
         const response = await client.get('/discover/nearby', {
-          params: { lat, lng, radius: 50, q },
+          params: { lat, lng, radius: 50, q, weights: currentWeights },
         });
         setSearchResults(response.data);
         snapTo(SNAP_MEDIUM);
@@ -274,9 +311,20 @@ export default function DiscoverScreen() {
   const handleSearch = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      fetchSearch(centerCoordinate[1], centerCoordinate[0], text);
+      fetchSearch(centerCoordinate[1], centerCoordinate[0], text, weights);
     },
-    [centerCoordinate, fetchSearch],
+    [centerCoordinate, fetchSearch, weights],
+  );
+
+  const handleWeightsChange = useCallback(
+    (newWeights: string) => {
+      setWeights(newWeights);
+      fetchNearby(centerCoordinate[1], centerCoordinate[0], newWeights);
+      if (searchQuery) {
+        fetchSearch(centerCoordinate[1], centerCoordinate[0], searchQuery, newWeights);
+      }
+    },
+    [centerCoordinate, fetchNearby, fetchSearch, searchQuery],
   );
 
   const handleClear = useCallback(() => {
@@ -287,6 +335,7 @@ export default function DiscoverScreen() {
   }, [snapTo, SNAP_BOTTOM]);
 
   const handleFocus = useCallback(() => {
+    setViewMode('search');
     snapTo(SNAP_MEDIUM);
   }, [snapTo, SNAP_MEDIUM]);
 
@@ -336,7 +385,6 @@ export default function DiscoverScreen() {
       setSelectedPoi(poi);
       setFocusedPoi(poi);
       setSelectedPoiLayout(layout);
-      handleZoomToPoi(poi);
       try {
         setLoading(true);
         const response = await client.get('/discover/details', {
@@ -365,25 +413,31 @@ export default function DiscoverScreen() {
         setLoading(false);
       }
     },
-    [handleZoomToPoi],
+    [],
   );
 
   const handleUserLocationChange = useCallback(
     (location: any) => {
-      if (!hasCenteredOnUser && location.coords) {
+      if (!hasCenteredRef.current && location.coords) {
         const { latitude, longitude } = location.coords;
-        setHasCenteredOnUser(true);
+        hasCenteredRef.current = true;
         setCenterCoordinate([longitude, latitude]);
         mapRef.current?.setCamera({
           centerCoordinate: [longitude, latitude],
           zoomLevel: 14,
           animationDuration: 1000,
         });
-        fetchNearby(latitude, longitude);
+        fetchNearby(latitude, longitude, weights);
       }
     },
-    [hasCenteredOnUser, fetchNearby],
+    [fetchNearby, weights],
   );
+
+  const handleMyMapsClick = useCallback(() => {
+    setViewMode('maps');
+    setIsExpanded(true);
+    snapTo(SNAP_MEDIUM);
+  }, [snapTo, SNAP_MEDIUM]);
 
   return (
     <View style={[styles.container, { backgroundColor: '#212121' }]}>
@@ -394,7 +448,10 @@ export default function DiscoverScreen() {
           logoEnabled={false}
           attributionEnabled={true}
           onRegionDidChange={handleRegionChangeComplete}
-          onPress={() => setFocusedPoi(null)}>
+          onPress={() => {
+            setFocusedPoi(null);
+            setIsExpanded(false);
+          }}>
           <MapLibreGL.Camera
             ref={mapRef}
             defaultSettings={{
@@ -402,8 +459,16 @@ export default function DiscoverScreen() {
               centerCoordinate: [2.2945, 48.8584],
             }}
           />
-          <MapLibreGL.UserLocation visible={true} onUpdate={handleUserLocationChange} />
-          <MapMarkers visibleMapPois={visibleMapPois} focusedPoi={focusedPoi} />
+          <MapLibreGL.UserLocation
+            visible={true}
+            onUpdate={handleUserLocationChange}
+            followUserMode="none"
+          />
+          <MapMarkers
+            visibleMapPois={visibleMapPois}
+            focusedPoi={focusedPoi}
+            onPoiSelect={handlePoiSelect}
+          />
         </MapLibreGL.MapView>
       ) : (
         <View style={styles.loadingContainer}>
@@ -413,12 +478,19 @@ export default function DiscoverScreen() {
       {!selectedPoi && (
         <FilterBar
           ref={filterBarRef}
+          isExpanded={isExpanded}
+          onToggle={setIsExpanded}
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSearch={handleSearch}
           onClear={handleClear}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onMyMapsClick={handleMyMapsClick}
+          onProfileClick={() => {
+            // @ts-ignore
+            navigation.navigate('Connect');
+          }}
         />
       )}
       <BottomDrawer
@@ -433,6 +505,17 @@ export default function DiscoverScreen() {
         onPoiSelect={handlePoiSelect}
         onZoom={handleZoomToPoi}
         focusedPoi={focusedPoi}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        maps={maps}
+        onMapsRefresh={fetchMaps}
+        onDeleteMap={handleDeleteMap}
+        onUpdateMap={handleUpdateMap}
+        onMapCreated={fetchMaps}
+        weights={weights}
+        onWeightsChange={handleWeightsChange}
+        selectedMapId={selectedMapId}
+        onSelectedMapIdChange={setSelectedMapId}
       />
       {selectedPoi && (
         <PoiDetailView
@@ -440,6 +523,14 @@ export default function DiscoverScreen() {
           onClose={() => setSelectedPoi(null)}
           loading={loading}
           initialLayout={selectedPoiLayout}
+          maps={maps}
+          onMapsChange={fetchMaps}
+          onMapClick={mapId => {
+            setSelectedPoi(null);
+            setSelectedMapId(mapId);
+            setViewMode('maps');
+            snapTo(SNAP_MEDIUM);
+          }}
         />
       )}
     </View>
@@ -457,18 +548,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  attribution: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  attributionText: {
-    color: '#FFFFFF',
-    fontSize: 10,
   },
 });
