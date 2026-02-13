@@ -2,18 +2,21 @@ FROM reactnativecommunity/react-native-android:latest
 
 WORKDIR /app
 
-# Install Bun
-RUN npm install -g bun
+# Copy mobile package files
+COPY mobile/package.json mobile/package-lock.json* ./mobile/
 
-# Copy mobile project files
-COPY mobile/package.json mobile/bun.lock ./mobile/
-
-# Install dependencies using Bun
-RUN cd mobile && bun install --frozen-lockfile --hoist
-
-# Copy the rest of the mobile code
-COPY mobile/ ./mobile/
-
+# Install dependencies with npm for guaranteed compatibility with React Native auto-linking
 WORKDIR /app/mobile
+RUN npm ci || npm install
 
-CMD ["bash", "-c", "cd android && chmod +x gradlew && ./gradlew assembleRelease"]
+# Copy source code
+COPY mobile/ .
+
+# Ensure .env is present
+COPY .env /app/mobile/.env
+COPY .env /app/.env
+
+# Clean Gradle
+RUN cd android && ./gradlew clean
+
+CMD ["bash", "-c", "cd android && ./gradlew assembleRelease --no-daemon"]

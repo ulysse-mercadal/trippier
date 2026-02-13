@@ -10,7 +10,7 @@ fclean:
 
 build-apk:
 	docker build -f docker/builder-apk/Dockerfile -t trippier-builder .
-	docker run --rm -v $(PWD)/mobile:/app/mobile:z -v $(PWD)/.env:/app/.env:ro trippier-builder bash -c "cd android && chmod +x gradlew && ./gradlew assembleRelease"
+	docker run --rm -v $(PWD)/mobile/android/app/build/outputs:/app/mobile/android/app/build/outputs:z trippier-builder
 	@echo "APK generated in mobile/android/app/build/outputs/apk/release/"
 
 lint:
