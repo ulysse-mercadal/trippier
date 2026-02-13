@@ -17,37 +17,74 @@ import {
   PermissionsAndroid,
   Platform,
 } from 'react-native';
-import { Marker, Region } from 'react-native-maps';
-import ClusteredMapView from 'react-native-map-clustering';
+import MapLibreGL from '@maplibre/maplibre-react-native';
 import { useTheme } from '@react-navigation/native';
-import { PanGestureHandler } from 'react-native-gesture-handler';
-import FilterBar, { FilterBarRef } from '../components/FilterBar';
-import PoiDetailView from '../components/PoiDetailView';
-import PoiListView from '../components/PoiListView';
-import client from '../api/client';
-import { POI } from '../lib/types';
-import { LayoutInfo } from '../components/PoiCard';
-import Animated, {
+import {
   useSharedValue,
-  useAnimatedStyle,
   withSpring,
   useAnimatedGestureHandler,
   runOnJS,
   useAnimatedScrollHandler,
   useAnimatedReaction,
 } from 'react-native-reanimated';
+import { MAPTILER_API_KEY, MAPTILER_MAP_ID } from '@env';
+
+import FilterBar, { FilterBarRef } from '../components/FilterBar';
+import PoiDetailView from '../components/PoiDetailView';
+import { MapMarkers } from '../components/Discover/MapMarkers';
+import { BottomDrawer } from '../components/Discover/BottomDrawer';
+
+import client from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { POI, Map as MapType } from '../lib/types';
+import { LayoutInfo } from '../components/PoiCard';
+
+// Initialize MapLibre
+const cleanApiKey = (MAPTILER_API_KEY || '').replace(/^["']|["']$/g, '');
+MapLibreGL.setAccessToken(cleanApiKey);
+
+if (Platform.OS === 'android') {
+  MapLibreGL.setConnected(true);
+}
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function DiscoverScreen() {
   const { colors } = useTheme();
+  const { token } = useAuth();
   const mapRef = useRef<any>(null);
+  const [mapStyle, setMapStyle] = useState<any>(null);
+
+  useEffect(() => {
+    const mapId = (MAPTILER_MAP_ID || 'dataviz-dark').replace(/^["']|["']$/g, '');
+    const apiKey = (MAPTILER_API_KEY || '').replace(/^["']|["']$/g, '');
+
+    async function fetchStyle() {
+      if (!apiKey) {
+        return;
+      }
+      const url = `https://api.maptiler.com/maps/${mapId}/style.json?key=${apiKey}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`Style fetch failed: ${res.status}`);
+        }
+        const json = await res.json();
+        setMapStyle(json);
+      } catch (err) {
+        console.error('FETCH_STYLE_ERROR:', err);
+      }
+    }
+    if (apiKey) {
+      MapLibreGL.setAccessToken(apiKey);
+      fetchStyle();
+    }
+  }, []);
+
   const listRef = useRef<any>(null);
   const filterBarRef = useRef<FilterBarRef>(null);
-  const lastZoomTime = useRef(0);
-
   const [nearbyPois, setNearbyPois] = useState<POI[]>([]);
-
+  const [maps, setMaps] = useState<MapType[]>([]);
   const [searchResults, setSearchResults] = useState<POI[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
@@ -55,12 +92,37 @@ export default function DiscoverScreen() {
   const [selectedPoiLayout, setSelectedPoiLayout] = useState<LayoutInfo | undefined>(undefined);
   const [hasCenteredOnUser, setHasCenteredOnUser] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentRegion, setCurrentRegion] = useState<Region>({
-    latitude: 48.8584,
-    longitude: 2.2945,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
+  const [centerCoordinate, setCenterCoordinate] = useState<[number, number]>([2.2945, 48.8584]);
+
+  const fetchMaps = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+    try {
+      const response = await client.get('/maps');
+      setMaps(response.data);
+    } catch (error) {
+      console.error('Failed to fetch maps:', error);
+    }
+  }, [token]);
+  useEffect(() => {
+    fetchMaps();
+  }, [fetchMaps]);
+
+  const visibleMapPois = useMemo(() => {
+    const poisMap = new Map<string, { poi: POI; mapIcon: string }>();
+    maps.forEach(map => {
+      if (map.isVisible && map.pois) {
+        map.pois.forEach(p => {
+          const id = p.place_id;
+          if (id && !poisMap.has(id)) {
+            poisMap.set(id, { poi: p, mapIcon: map.icon || '🌍' });
+          }
+        });
+      }
+    });
+    return Array.from(poisMap.values());
+  }, [maps]);
 
   const SNAP_TOP = 0;
   const SNAP_MEDIUM = SCREEN_HEIGHT * 0.33;
@@ -72,7 +134,6 @@ export default function DiscoverScreen() {
 
   const snapTo = useCallback(
     (point: number) => {
-      console.log('snapTo called with:', point);
       drawerTranslateY.value = withSpring(point, { damping: 15 });
     },
     [drawerTranslateY],
@@ -107,10 +168,10 @@ export default function DiscoverScreen() {
       }
     }
   }, []);
+
   useEffect(() => {
     requestLocationPermission();
-    fetchNearby(currentRegion.latitude, currentRegion.longitude);
-  }, [currentRegion.latitude, currentRegion.longitude, fetchNearby, requestLocationPermission]);
+  }, [requestLocationPermission]);
 
   useEffect(() => {
     const backAction = () => {
@@ -133,6 +194,7 @@ export default function DiscoverScreen() {
     setSearchResults([]);
     filterBarRef.current?.blur();
   }, []);
+
   useAnimatedReaction(
     () => drawerTranslateY.value,
     (currentY, previousY) => {
@@ -141,12 +203,6 @@ export default function DiscoverScreen() {
       }
     },
   );
-
-  const drawerStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: drawerTranslateY.value }],
-    };
-  });
 
   const scrollHandler = useAnimatedScrollHandler(event => {
     scrollY.value = event.contentOffset.y;
@@ -218,9 +274,9 @@ export default function DiscoverScreen() {
   const handleSearch = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      fetchSearch(currentRegion.latitude, currentRegion.longitude, text);
+      fetchSearch(centerCoordinate[1], centerCoordinate[0], text);
     },
-    [currentRegion, fetchSearch],
+    [centerCoordinate, fetchSearch],
   );
 
   const handleClear = useCallback(() => {
@@ -234,14 +290,10 @@ export default function DiscoverScreen() {
     snapTo(SNAP_MEDIUM);
   }, [snapTo, SNAP_MEDIUM]);
 
-  const handleRegionChangeComplete = useCallback(
-    (region: Region) => {
-      setCurrentRegion(region);
-      const calculatedRadius = Math.min(Math.max(region.latitudeDelta * 111, 2), 50);
-      fetchNearby(region.latitude, region.longitude, calculatedRadius);
-    },
-    [fetchNearby],
-  );
+  const handleRegionChangeComplete = useCallback((feature: any) => {
+    const coords = feature.geometry.coordinates as [number, number];
+    setCenterCoordinate(coords);
+  }, []);
 
   const orderedSearchResults = useMemo(() => {
     if (!focusedPoi) {
@@ -263,7 +315,6 @@ export default function DiscoverScreen() {
 
   const handleZoomToPoi = useCallback(
     (poi: POI) => {
-      lastZoomTime.current = Date.now();
       const lat = typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat;
       const lng = typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng;
       setFocusedPoi(poi);
@@ -271,22 +322,17 @@ export default function DiscoverScreen() {
       if (listRef.current && listRef.current.scrollTo) {
         listRef.current.scrollTo({ y: 0, animated: true });
       }
-      mapRef.current?.animateToRegion(
-        {
-          latitude: lat,
-          longitude: lng,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        1000,
-      );
+      mapRef.current?.setCamera({
+        centerCoordinate: [lng, lat],
+        zoomLevel: 16,
+        animationDuration: 1000,
+      });
     },
     [snapTo, SNAP_SMALL],
   );
 
   const handlePoiSelect = useCallback(
     async (poi: POI, layout?: LayoutInfo) => {
-      console.log('handlePoiSelect called for:', poi.name);
       setSelectedPoi(poi);
       setFocusedPoi(poi);
       setSelectedPoiLayout(layout);
@@ -322,114 +368,48 @@ export default function DiscoverScreen() {
     [handleZoomToPoi],
   );
 
-  const mapStyle = useMemo(() => {
-    return [
-      {
-        elementType: 'geometry',
-        stylers: [{ color: '#212121' }],
-      },
-      {
-        elementType: 'labels.text.fill',
-        stylers: [{ color: '#757575' }],
-      },
-      {
-        elementType: 'labels.text.stroke',
-        stylers: [{ color: '#212121' }],
-      },
-      {
-        featureType: 'administrative',
-        elementType: 'geometry',
-        stylers: [{ color: '#757575' }],
-      },
-      {
-        featureType: 'road',
-        elementType: 'geometry.fill',
-        stylers: [{ color: '#2c2c2c' }],
-      },
-      {
-        featureType: 'water',
-        elementType: 'geometry',
-        stylers: [{ color: '#000000' }],
-      },
-      {
-        featureType: 'poi',
-        stylers: [{ visibility: 'on' }],
-      },
-      {
-        featureType: 'transit',
-        stylers: [{ visibility: 'on' }],
-      },
-    ];
-  }, []);
-
-  const renderCluster = (cluster: any) => {
-    const { id, geometry, onPress, properties } = cluster;
-    const points = properties.point_count;
-    return (
-      <Marker
-        key={`cluster-${id}`}
-        coordinate={{
-          latitude: geometry.coordinates[1],
-          longitude: geometry.coordinates[0],
-        }}
-        onPress={onPress}>
-        <View style={styles.clusterContainer}>
-          <Text style={styles.clusterText}>{points}</Text>
-        </View>
-      </Marker>
-    );
-  };
-
   const handleUserLocationChange = useCallback(
-    (event: any) => {
-      if (!hasCenteredOnUser && event.nativeEvent.coordinate) {
-        const { latitude, longitude } = event.nativeEvent.coordinate;
+    (location: any) => {
+      if (!hasCenteredOnUser && location.coords) {
+        const { latitude, longitude } = location.coords;
         setHasCenteredOnUser(true);
-        const newRegion = {
-          ...currentRegion,
-          latitude,
-          longitude,
-        };
-        setCurrentRegion(newRegion);
-        mapRef.current?.animateToRegion(newRegion, 1000);
+        setCenterCoordinate([longitude, latitude]);
+        mapRef.current?.setCamera({
+          centerCoordinate: [longitude, latitude],
+          zoomLevel: 14,
+          animationDuration: 1000,
+        });
         fetchNearby(latitude, longitude);
       }
     },
-    [hasCenteredOnUser, currentRegion, fetchNearby],
+    [hasCenteredOnUser, fetchNearby],
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ClusteredMapView
-        ref={mapRef}
-        style={styles.map}
-        customMapStyle={mapStyle}
-        initialRegion={currentRegion}
-        onRegionChangeComplete={handleRegionChangeComplete}
-        onPress={() => setFocusedPoi(null)}
-        renderCluster={renderCluster}
-        showsUserLocation={true}
-        showsCompass={false}
-        showsMyLocationButton={false}
-        onUserLocationChange={handleUserLocationChange}>
-        {focusedPoi && (
-          <Marker
-            coordinate={{
-              latitude:
-                typeof focusedPoi.lat === 'string' ? parseFloat(focusedPoi.lat) : focusedPoi.lat,
-              longitude:
-                typeof focusedPoi.lng === 'string' ? parseFloat(focusedPoi.lng) : focusedPoi.lng,
+    <View style={[styles.container, { backgroundColor: '#212121' }]}>
+      {mapStyle ? (
+        <MapLibreGL.MapView
+          style={styles.map}
+          mapStyle={mapStyle}
+          logoEnabled={false}
+          attributionEnabled={true}
+          onRegionDidChange={handleRegionChangeComplete}
+          onPress={() => setFocusedPoi(null)}>
+          <MapLibreGL.Camera
+            ref={mapRef}
+            defaultSettings={{
+              zoomLevel: 14,
+              centerCoordinate: [2.2945, 48.8584],
             }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            onPress={e => {
-              e.stopPropagation();
-              handlePoiSelect(focusedPoi);
-            }}>
-            <View style={styles.selectedMarker} />
-          </Marker>
-        )}
-      </ClusteredMapView>
-
+          />
+          <MapLibreGL.UserLocation visible={true} onUpdate={handleUserLocationChange} />
+          <MapMarkers visibleMapPois={visibleMapPois} focusedPoi={focusedPoi} />
+        </MapLibreGL.MapView>
+      ) : (
+        <View style={styles.loadingContainer}>
+          <Text style={{ color: colors.text }}>Loading Map...</Text>
+        </View>
+      )}
       {!selectedPoi && (
         <FilterBar
           ref={filterBarRef}
@@ -441,27 +421,19 @@ export default function DiscoverScreen() {
           onBlur={handleBlur}
         />
       )}
-
-      <Animated.View style={[styles.drawer, drawerStyle]}>
-        <PanGestureHandler onGestureEvent={headerGestureHandler}>
-          <Animated.View style={styles.gestureHeader}>
-            <View style={styles.drawerHandle} />
-          </Animated.View>
-        </PanGestureHandler>
-        <Animated.View style={{ flex: 1 }}>
-          <PoiListView
-            ref={listRef}
-            scrollHandler={scrollHandler}
-            searchQuery={searchQuery}
-            searchResults={orderedSearchResults}
-            nearbyPois={orderedNearbyPois}
-            loading={loading}
-            onPoiSelect={handlePoiSelect}
-            onZoom={handleZoomToPoi}
-            highlightedPoiId={focusedPoi?.place_id}
-          />
-        </Animated.View>
-      </Animated.View>
+      <BottomDrawer
+        drawerTranslateY={drawerTranslateY}
+        headerGestureHandler={headerGestureHandler}
+        listRef={listRef}
+        scrollHandler={scrollHandler}
+        searchQuery={searchQuery}
+        searchResults={orderedSearchResults}
+        nearbyPois={orderedNearbyPois}
+        loading={loading}
+        onPoiSelect={handlePoiSelect}
+        onZoom={handleZoomToPoi}
+        focusedPoi={focusedPoi}
+      />
       {selectedPoi && (
         <PoiDetailView
           selectedPoi={selectedPoi}
@@ -481,59 +453,22 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  selectedMarker: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 4,
-    borderColor: '#000000',
-  },
-  clusterContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#000000',
-    alignItems: 'center',
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    alignItems: 'center',
   },
-  clusterText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  drawer: {
+  attribution: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: SCREEN_HEIGHT,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 10,
-    zIndex: 1005,
-    paddingBottom: 50,
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  drawerHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-  },
-  gestureHeader: {
-    height: 40,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+  attributionText: {
+    color: '#FFFFFF',
+    fontSize: 10,
   },
 });

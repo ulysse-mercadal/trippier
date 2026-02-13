@@ -96,6 +96,11 @@ export default function LoginPage() {
               className="w-full py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl text-lg mt-4 hover:bg-white/10 transition-colors block">
               Download App
             </a>
+            <a
+              href="/discover"
+              className="mt-6 text-white/60 hover:text-white transition-colors underline underline-offset-4">
+              Stay Logged Out
+            </a>
           </motion.div>
         )}
       </AnimatePresence>

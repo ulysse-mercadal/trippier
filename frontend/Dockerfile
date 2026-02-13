@@ -1,29 +1,26 @@
-FROM node:20-alpine AS builder
+FROM oven/bun:1-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json bun.lockb* ./
+RUN bun install --frozen-lockfile
 
 COPY . .
 
 ARG API_URL
-ARG GOOGLE_MAPS_API_KEY
-
 ENV API_URL=$API_URL
-ENV GOOGLE_MAPS_API_KEY=$GOOGLE_MAPS_API_KEY
 
-RUN npm run build
+RUN bun run build
 
-FROM node:20-alpine
+FROM oven/bun:1-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["bun", "run", "start"]

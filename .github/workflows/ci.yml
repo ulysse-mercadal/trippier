@@ -11,71 +11,130 @@ on:
       - dev
 
 jobs:
-  backend:
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
+          fetch-depth: 0
+      - name: Detect Changes
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # On compare le dernier commit de la branche source (HEAD^2) par rapport à son parent
+            echo "Comparing last commit of PR branch"
+            git diff --name-only HEAD^2~1 HEAD^2 > changes.txt
+          else
+            # On compare le dernier commit poussé par rapport à son parent
+            echo "Comparing HEAD~1 to HEAD"
+            git diff --name-only HEAD~1 HEAD > changes.txt
+          fi
+          cat changes.txt
+          if grep -q "^backend/" changes.txt; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
+          if grep -q "^frontend/" changes.txt; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
+          if grep -q "^mobile/" changes.txt; then echo "mobile=true" >> $GITHUB_OUTPUT; else echo "mobile=false" >> $GITHUB_OUTPUT; fi
+
+  backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: trippier_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - name: Install dependencies
         working-directory: ./backend
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Generate Prisma Client
         working-directory: ./backend
-        run: npx prisma generate
+        run: bunx prisma generate
+      - name: Run Migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
+        run: bunx prisma db push
+      - name: Seed Database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
+        run: bunx prisma db seed
       - name: Lint
         working-directory: ./backend
-        run: npm run lint
-      - name: Run Tests
-        working-directory: ./backend
-        run: npm run test
+        run: bun run lint
       - name: Build
         working-directory: ./backend
-        run: npm run build
+        run: bun run build
+      - name: Start Backend
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/trippier_db?schema=public
+          JWT_SECRET: super-secret-test-key
+          PORT: 3001
+        run: |
+          bun run start:prod &
+          bunx wait-on http://localhost:3001
+      - name: Run Tests (Postman)
+        working-directory: ./backend
+        run: bun run test:e2e:all
 
   frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          bun-version: latest
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Lint
         working-directory: ./frontend
-        run: npm run lint
+        run: bun run lint
       - name: Build
         working-directory: ./frontend
-        run: npm run build
+        run: bun run build
         env:
           API_URL: http://localhost:3001
-          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
 
   mobile:
+    needs: changes
+    if: ${{ needs.changes.outputs.mobile == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 18
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+          bun-version: latest
       - name: Install dependencies
         working-directory: ./mobile
-        run: npm ci
+        run: bun install --frozen-lockfile
       - name: Lint
         working-directory: ./mobile
-        run: npm run lint
+        run: bun run lint
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -86,7 +145,6 @@ jobs:
       - name: Create .env file
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
-          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
       - name: Build Android
         working-directory: ./mobile/android
         run: |

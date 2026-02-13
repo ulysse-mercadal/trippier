@@ -52,7 +52,6 @@ export default function PoiCard({ poi, onPress, onZoom, isHighlighted }: PoiCard
             {onZoom && (
               <Pressable
                 onPress={e => {
-                  console.log('PoiCard zoom button pressed');
                   e.stopPropagation();
                   onZoom(poi);
                 }}

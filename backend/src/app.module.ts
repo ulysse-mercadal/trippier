@@ -15,6 +15,8 @@ import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { DiscoverModule } from './discover/discover.module';
+import { MapsModule } from './maps/maps.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { DiscoverModule } from './discover/discover.module';
     UsersModule,
     AuthModule,
     DiscoverModule,
+    MapsModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

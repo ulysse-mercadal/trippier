@@ -5,14 +5,14 @@ echo "🚀 Starting Backend on port 3001..."
 cd /app/backend
 # Ensure PORT env var is set for NestJS
 export PORT=3001
-node dist/main.js &
+bun dist/main.js &
 BACKEND_PID=$!
 
 # Start Frontend (Next.js)
 echo "🚀 Starting Frontend on port 3000..."
 cd /app/frontend
 # Next.js start command
-npm start -- -p 3000 &
+bun run start -- -p 3000 &
 FRONTEND_PID=$!
 
 # Wait for any process to exit

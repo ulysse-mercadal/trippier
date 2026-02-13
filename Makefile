@@ -10,17 +10,20 @@ fclean:
 
 build-apk:
 	docker build -f docker/builder-apk/Dockerfile -t trippier-builder .
-	docker run --rm -v $(PWD)/mobile:/app/mobile:z -v $(PWD)/.env:/app/.env:ro trippier-builder bash -c "cd android && chmod +x gradlew && ./gradlew assembleRelease"
-	@echo "APK generated in mobile/android/app/build/outputs/apk/release/"
+	docker run --rm -v $(PWD)/mobile/android/app/build/outputs:/app/mobile/android/app/build/outputs:z trippier-builder
+	@echo "APK generated in mobile/android/app/build/outputs/apk/debug/"
 
 lint:
-	cd backend && npx eslint "{src,apps,libs,test}/**/*.ts"
-	cd frontend && npm run lint
-	cd mobile && npm run lint
+	cd backend && bunx eslint "{src,apps,libs,test}/**/*.ts"
+	cd frontend && bun run lint
+	cd mobile && bun run lint
 
 fix-lint:
-	cd backend && npm run lint
-	cd frontend && npm run lint -- --fix
-	cd mobile && npm run lint -- --fix
+	cd backend && bun run lint
+	cd frontend && bun run lint -- --fix
+	cd mobile && bun run lint -- --fix
 
-.PHONY: up down fclean build-apk lint fix-lint
+test: lint
+	cd backend && bun run test:e2e:all
+
+.PHONY: up down fclean build-apk lint fix-lint test
