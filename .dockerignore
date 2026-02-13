@@ -1,0 +1,9 @@
+**/node_modules
+**/build
+**/.gradle
+**/android/app/build
+**/ios/Pods
+.git
+.vscode
+.next
+dist

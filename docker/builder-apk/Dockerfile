@@ -19,4 +19,4 @@ COPY .env /app/.env
 # Clean Gradle
 RUN cd android && ./gradlew clean
 
-CMD ["bash", "-c", "cd android && ./gradlew assembleRelease --no-daemon"]
+CMD ["bash", "-c", "cd android && ./gradlew assembleDebug --no-daemon --info"]

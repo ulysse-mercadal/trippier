@@ -11,7 +11,7 @@ fclean:
 build-apk:
 	docker build -f docker/builder-apk/Dockerfile -t trippier-builder .
 	docker run --rm -v $(PWD)/mobile/android/app/build/outputs:/app/mobile/android/app/build/outputs:z trippier-builder
-	@echo "APK generated in mobile/android/app/build/outputs/apk/release/"
+	@echo "APK generated in mobile/android/app/build/outputs/apk/debug/"
 
 lint:
 	cd backend && bunx eslint "{src,apps,libs,test}/**/*.ts"
