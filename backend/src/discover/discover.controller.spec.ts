@@ -16,6 +16,7 @@ describe('DiscoverController', () => {
 
   const mockDiscoverService = {
     findNearbyPOIs: jest.fn(),
+    smartDiscovery: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -34,5 +35,11 @@ describe('DiscoverController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  it('should call smartDiscovery service', async () => {
+    const query = { city: 'Paris', weights: 'museum:10' };
+    await controller.smartDiscovery(query);
+    expect(mockDiscoverService.smartDiscovery).toHaveBeenCalledWith('Paris', 'museum:10');
   });
 });

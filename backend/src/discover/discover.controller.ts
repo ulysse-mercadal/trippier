@@ -7,30 +7,48 @@
 //
 // **************************************************************************
 
-import { Controller, Get, Query, ParseFloatPipe } from '@nestjs/common';
+import { Controller, Get, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { DiscoverService } from './discover.service';
+import { GetNearbyDto } from './dto/get-nearby.dto';
+import { GetDetailsDto } from './dto/get-details.dto';
+import { SmartDiscoveryDto } from './dto/smart-discovery.dto';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('discover')
 @Controller('discover')
 export class DiscoverController {
   constructor(private readonly discoverService: DiscoverService) {}
 
+  @ApiOperation({ summary: 'Find nearby POIs' })
+  @ApiResponse({ status: 200, description: 'List of nearby POIs.' })
+  @ApiResponse({ status: 400, description: 'Validation failed.' })
   @Get('nearby')
-  async getNearby(
-    @Query('lat', ParseFloatPipe) lat: number,
-    @Query('lng', ParseFloatPipe) lng: number,
-    @Query('radius') radius?: number,
-    @Query('q') q?: string,
-  ) {
-    return this.discoverService.findNearbyPOIs(lat, lng, radius, q);
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getNearby(@Query() query: GetNearbyDto) {
+    return this.discoverService.findNearbyPOIs(
+      query.lat,
+      query.lng,
+      query.radius,
+      query.q,
+      query.weights,
+    );
   }
 
+  @ApiOperation({ summary: 'Smart discovery from Wikivoyage' })
+  @ApiResponse({ status: 200, description: 'List of extracted POIs from Wikivoyage.' })
+  @ApiResponse({ status: 400, description: 'Validation failed.' })
+  @Get('smart')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async smartDiscovery(@Query() query: SmartDiscoveryDto) {
+    return this.discoverService.smartDiscovery(query.city, query.weights);
+  }
+
+  @ApiOperation({ summary: 'Get POI details' })
+  @ApiResponse({ status: 200, description: 'POI details.' })
+  @ApiResponse({ status: 400, description: 'Validation failed.' })
   @Get('details')
-  async getDetails(
-    @Query('place_id') place_id: string,
-    @Query('name') name: string,
-    @Query('lat', ParseFloatPipe) lat: number,
-    @Query('lng', ParseFloatPipe) lng: number,
-  ) {
-    return this.discoverService.getPOIDetails(place_id, name, lat, lng);
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getDetails(@Query() query: GetDetailsDto) {
+    return this.discoverService.getPOIDetails(query.place_id, query.name, query.lat, query.lng);
   }
 }

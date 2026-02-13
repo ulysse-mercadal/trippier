@@ -20,7 +20,6 @@ import {
   Vibration,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import client from '../api/client';
 import ErrorMessage from '../components/ErrorMessage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -36,7 +35,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invalidFields, setInvalidFields] = useState<string[]>([]);
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const revealAnim = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -135,8 +134,7 @@ export default function LoginScreen() {
       if (mode === 'login') {
         await login(email, password);
       } else {
-        await client.post('/auth/register', { email, password, name });
-        await login(email, password);
+        await register(email, password, name);
       }
     } catch (err: any) {
       if (err.response) {

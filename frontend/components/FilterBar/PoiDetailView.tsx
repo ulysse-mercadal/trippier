@@ -9,22 +9,24 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   IoArrowBack,
-  IoStar,
-  IoPeople,
   IoInformationCircleOutline,
   IoGlobeOutline,
   IoMapOutline,
   IoCheckmarkOutline,
   IoCallOutline,
-  IoReaderOutline,
+  IoBookmarkOutline,
+  IoBookmark,
 } from 'react-icons/io5';
 import clsx from 'clsx';
 import Image from 'next/image';
-import { POI } from '../../lib/types';
+import { POI, Map } from '../../lib/types';
+import CommentSection from './CommentSection';
+import MapSelectionModal from '../MapSelectionModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface PoiDetailViewProps {
   selectedPoi: POI;
@@ -32,6 +34,8 @@ interface PoiDetailViewProps {
   loading: boolean;
   onSearch?: (text: string) => void;
   setInputValue: (val: string) => void;
+  maps?: Map[];
+  onMapClick?: (mapId: number) => void;
 }
 
 export default function PoiDetailView({
@@ -40,9 +44,25 @@ export default function PoiDetailView({
   loading,
   onSearch,
   setInputValue,
+  maps = [],
+  onMapClick,
 }: PoiDetailViewProps) {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+
+  const savedInMaps = useMemo(() => {
+    return maps.filter(m =>
+      m.pois?.some(p => {
+        const lat1 = Number(p.lat);
+        const lng1 = Number(p.lng);
+        const lat2 = Number(selectedPoi.lat);
+        const lng2 = Number(selectedPoi.lng);
+        return Math.abs(lat1 - lat2) < 0.0001 && Math.abs(lng1 - lng2) < 0.0001;
+      }),
+    );
+  }, [maps, selectedPoi.lat, selectedPoi.lng]);
 
   const copyToClipboard = (text: string) => {
     if (copied) {
@@ -70,7 +90,7 @@ export default function PoiDetailView({
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       className="flex-1 flex flex-col overflow-y-auto p-6 scrollbar-hide pb-24">
-      <div className="flex items-center mb-6">
+      <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => {
             if (onPoiSelect) {
@@ -84,7 +104,37 @@ export default function PoiDetailView({
           className="flex items-center text-gray-900 font-black text-lg transition-colors hover:text-gray-600">
           <IoArrowBack size={24} className="mr-2" /> Back
         </button>
+
+        {user && (
+          <button
+            onClick={() => setIsSaveModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all bg-black text-white hover:bg-gray-800">
+            {savedInMaps.length > 0 ? (
+              <>
+                <IoBookmark size={18} /> Saved
+              </>
+            ) : (
+              <>
+                <IoBookmarkOutline size={18} /> Save
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {!user && (
+        <div className="mb-8 bg-gray-50 p-6 rounded-3xl border border-gray-100 text-center">
+          <p className="text-sm text-gray-600 mb-4 font-medium">
+            Login to save this place to your maps and plan your trip.
+          </p>
+          <button
+            onClick={() => (window.location.href = '/')}
+            className="w-full py-3 bg-black text-white font-bold rounded-2xl hover:bg-gray-800 transition-all uppercase text-xs tracking-widest shadow-sm">
+            Login or Register
+          </button>
+        </div>
+      )}
+
       {selectedPoi.thumbnail && !isCurrentImgError && (
         <div className="w-full h-auto rounded-3xl overflow-hidden mb-6 shadow-md border border-gray-100 relative min-h-50">
           <Image
@@ -104,18 +154,6 @@ export default function PoiDetailView({
         )}>
         {selectedPoi.name}
       </h2>
-      <div className="flex items-center space-x-4 mb-6">
-        <div className="flex items-center text-yellow-500">
-          <IoStar size={16} className="mr-1" />
-          <span className="text-sm font-bold">{selectedPoi.rating}</span>
-        </div>
-        <div className="flex items-center text-gray-400">
-          <IoPeople size={16} className="mr-1" />
-          <span className="text-sm font-medium">
-            {selectedPoi.user_ratings_total?.toLocaleString()} reviews
-          </span>
-        </div>
-      </div>
       <div className="space-y-8">
         {selectedPoi.description ? (
           <section>
@@ -188,16 +226,6 @@ export default function PoiDetailView({
             ) : (
               loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
             )}
-            {selectedPoi.wikipediaUrl ? (
-              <button
-                onClick={() => selectedPoi.wikipediaUrl && openUrl(selectedPoi.wikipediaUrl)}
-                className="w-full flex items-center justify-between p-4 bg-white border-2 border-black text-black rounded-2xl hover:bg-gray-50 transition-all shadow-sm">
-                <span className="font-bold text-sm">Wikipedia</span>
-                <IoReaderOutline size={18} />
-              </button>
-            ) : (
-              loading && <div className="h-14 bg-gray-100 rounded-2xl animate-pulse" />
-            )}
             {selectedPoi.wikivoyageUrl ? (
               <button
                 onClick={() => selectedPoi.wikivoyageUrl && openUrl(selectedPoi.wikivoyageUrl)}
@@ -210,13 +238,46 @@ export default function PoiDetailView({
             )}
           </div>
         </section>
-        <section>
-          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-            Location
-          </h4>
-          <p className="text-sm text-gray-500">{selectedPoi.address}</p>
-        </section>
+
+        {savedInMaps.length > 0 && (
+          <section className="pt-4 border-t border-gray-100">
+            <div className="flex items-center text-gray-400 mb-4">
+              <IoBookmarkOutline size={20} className="mr-2" />
+              <h4 className="text-xs font-bold uppercase tracking-wider">Saved in your maps</h4>
+            </div>
+            <div className="flex flex-col gap-2">
+              {savedInMaps.map(map => (
+                <button
+                  key={map.id}
+                  onClick={() => onMapClick?.(map.id)}
+                  className="flex items-center p-3 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all border border-gray-100 group">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl shadow-sm mr-3">
+                    {map.icon || '🌍'}
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-bold text-gray-900 truncate">{map.title}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                      {map.pois?.length || 0} locations
+                    </p>
+                  </div>
+                  <IoArrowBack
+                    size={16}
+                    className="rotate-180 text-gray-300 group-hover:text-black transition-colors"
+                  />
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <CommentSection poi={selectedPoi} />
       </div>
+
+      <MapSelectionModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        poi={selectedPoi}
+      />
     </motion.div>
   );
 }

@@ -1,0 +1,103 @@
+{
+  "info": {
+    "_postman_id": "c7b8c7b8-c7b8-c7b8-c7b8-c7b8c7b8c7b8",
+    "name": "Trippier Discover Validation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Nearby: Missing Lat/Lng (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Error message contains validation details\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include(\"Latitude (lat) is required\");",
+              "    pm.expect(jsonData.message).to.include(\"Longitude (lng) is required\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/discover/nearby",
+          "host": ["{{baseUrl}}"],
+          "path": ["discover", "nearby"]
+        }
+      }
+    },
+    {
+      "name": "Nearby: Invalid Lat/Lng Type (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Error message validates number type\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    const messages = JSON.stringify(jsonData.message);",
+              "    pm.expect(messages).to.satisfy(m => m.includes(\"must be a number\") || m.includes(\"must be between\"));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/discover/nearby?lat=invalid&lng=invalid",
+          "host": ["{{baseUrl}}"],
+          "path": ["discover", "nearby"],
+          "query": [
+            { "key": "lat", "value": "invalid" },
+            { "key": "lng", "value": "invalid" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Details: Missing Parameters (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "pm.test(\"Error message checks required fields\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include(\"Place ID (place_id) is required\");",
+              "    pm.expect(jsonData.message).to.include(\"Name is required\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/discover/details",
+          "host": ["{{baseUrl}}"],
+          "path": ["discover", "details"]
+        }
+      }
+    }
+  ]
+}

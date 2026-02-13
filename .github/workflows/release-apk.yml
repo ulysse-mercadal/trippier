@@ -21,10 +21,10 @@ jobs:
         with:
           node-version: 18
           cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: mobile/package.json
       - name: Install Dependencies
         working-directory: ./mobile
-        run: npm ci
+        run: npm install
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -35,7 +35,6 @@ jobs:
       - name: Create .env file
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
-          echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
       - name: Build APK
         working-directory: ./mobile/android
         run: |

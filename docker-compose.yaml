@@ -24,7 +24,7 @@ services:
     volumes:
       - ./backend:/app:z
       - /app/node_modules
-    command: sh -c "npx prisma migrate dev && npm run start:dev"
+    command: sh -c "bunx wait-on tcp:db:5432 && bunx prisma db push && bunx prisma db seed && bun run start:dev"
     depends_on:
       - db
     env_file:
@@ -36,18 +36,20 @@ services:
       target: builder
       args:
         API_URL: ${API_URL}
-        GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+        MAPTILER_API_KEY: ${MAPTILER_API_KEY}
+        MAPTILER_MAP_ID: ${MAPTILER_MAP_ID}
     restart: always
     environment:
       API_URL: ${API_URL}
-      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+      MAPTILER_API_KEY: ${MAPTILER_API_KEY}
+      MAPTILER_MAP_ID: ${MAPTILER_MAP_ID}
     ports:
       - "${FRONTEND_PORT}:3000"
     volumes:
       - ./frontend:/app:z
       - /app/node_modules
       - /app/.next
-    command: npm run dev
+    command: bun run dev
     depends_on:
       - backend
     env_file:

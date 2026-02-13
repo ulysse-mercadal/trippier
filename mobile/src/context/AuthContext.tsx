@@ -11,18 +11,26 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../api/client';
 
+interface User {
+  id: number;
+  email: string;
+  name?: string;
+  role: 'USER' | 'ADMIN';
+}
+
 interface AuthContextData {
   token: string | null;
-  user: any | null;
+  user: User | null;
   loading: boolean;
   login(email: string, pass: string): Promise<void>;
+  register(email: string, pass: string, name: string): Promise<void>;
   logout(): Promise<void>;
 }
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (storageToken && storageUser) {
         setToken(storageToken);
         setUser(JSON.parse(storageUser));
-        client.defaults.headers.common.Authorization = `Bearer ${storageToken}`;
       }
       setLoading(false);
     }
@@ -44,7 +51,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { access_token, user: userData } = response.data;
     setToken(access_token);
     setUser(userData);
-    client.defaults.headers.common.Authorization = `Bearer ${access_token}`;
+    await AsyncStorage.setItem('@Trippier:token', access_token);
+    await AsyncStorage.setItem('@Trippier:user', JSON.stringify(userData));
+  }
+
+  async function register(email: string, pass: string, name: string) {
+    const response = await client.post('/auth/register', { email, password: pass, name });
+    const { access_token, user: userData } = response.data;
+    setToken(access_token);
+    setUser(userData);
     await AsyncStorage.setItem('@Trippier:token', access_token);
     await AsyncStorage.setItem('@Trippier:user', JSON.stringify(userData));
   }
@@ -53,11 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await AsyncStorage.multiRemove(['@Trippier:token', '@Trippier:user']);
     setToken(null);
     setUser(null);
-    delete client.defaults.headers.common.Authorization;
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, loading, login, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
