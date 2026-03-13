@@ -36,6 +36,7 @@ interface PoiDetailViewProps {
   setInputValue: (val: string) => void;
   maps?: Map[];
   onMapClick?: (mapId: number) => void;
+  onShowWiki?: (url: string | null) => void;
 }
 
 export default function PoiDetailView({
@@ -46,6 +47,7 @@ export default function PoiDetailView({
   setInputValue,
   maps = [],
   onMapClick,
+  onShowWiki,
 }: PoiDetailViewProps) {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -228,7 +230,12 @@ export default function PoiDetailView({
             )}
             {selectedPoi.wikivoyageUrl ? (
               <button
-                onClick={() => selectedPoi.wikivoyageUrl && openUrl(selectedPoi.wikivoyageUrl)}
+                onClick={() =>
+                  selectedPoi.wikivoyageUrl &&
+                  (onShowWiki
+                    ? onShowWiki(selectedPoi.wikivoyageUrl)
+                    : openUrl(selectedPoi.wikivoyageUrl))
+                }
                 className="w-full flex items-center justify-between p-4 bg-white border-2 border-black text-black rounded-2xl hover:bg-gray-50 transition-all shadow-sm">
                 <span className="font-bold text-sm">Travel Guide</span>
                 <IoGlobeOutline size={18} />
