@@ -40,6 +40,8 @@ interface FilterBarProps {
   onMapsRefresh?: () => void;
   weights?: string;
   onWeightsChange?: (weights: string) => void;
+  onShowWiki?: (url: string | null) => void;
+  isWikiVisible?: boolean;
 }
 
 export default function FilterBar({
@@ -63,6 +65,8 @@ export default function FilterBar({
   onMapsRefresh,
   weights = '',
   onWeightsChange,
+  onShowWiki,
+  isWikiVisible = false,
 }: FilterBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
@@ -109,8 +113,11 @@ export default function FilterBar({
       return;
     }
     if (selectedPoi) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMobileState('high');
+      if (isWikiVisible) {
+        setMobileState('low');
+      } else {
+        setMobileState('high');
+      }
     } else if (isExpanded) {
       if (mobileState === 'hidden') {
         setMobileState('medium');
@@ -118,7 +125,7 @@ export default function FilterBar({
     } else {
       setMobileState('hidden');
     }
-  }, [isExpanded, selectedPoi, isSmallScreen, mobileState]);
+  }, [isExpanded, selectedPoi, isSmallScreen, mobileState, isWikiVisible]);
 
   useEffect(() => {
     if (isSmallScreen) {
@@ -243,6 +250,7 @@ export default function FilterBar({
                 setInputValue={setInputValue}
                 maps={maps}
                 onMapClick={handleMapClickFromPoi}
+                onShowWiki={onShowWiki}
               />
             ) : viewMode === 'maps' ? (
               selectedMap ? (
