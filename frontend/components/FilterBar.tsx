@@ -75,6 +75,29 @@ export default function FilterBar({
   const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
   const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
 
+  // Sync mobileState with props during render to avoid cascading renders
+  const [prevPoi, setPrevPoi] = useState(selectedPoi);
+  const [prevWiki, setPrevWiki] = useState(isWikiVisible);
+  const [prevExpanded, setPrevExpanded] = useState(isExpanded);
+
+  if (selectedPoi !== prevPoi || isWikiVisible !== prevWiki || isExpanded !== prevExpanded) {
+    setPrevPoi(selectedPoi);
+    setPrevWiki(isWikiVisible);
+    setPrevExpanded(isExpanded);
+
+    if (isSmallScreen) {
+      if (selectedPoi) {
+        setMobileState(isWikiVisible ? 'low' : 'high');
+      } else if (isExpanded) {
+        if (mobileState === 'hidden') {
+          setMobileState('medium');
+        }
+      } else {
+        setMobileState('hidden');
+      }
+    }
+  }
+
   const selectedMap = maps.find(m => m.id === selectedMapId) || null;
 
   useEffect(() => {
@@ -107,25 +130,6 @@ export default function FilterBar({
       setMobileState('medium');
     }
   };
-
-  useEffect(() => {
-    if (!isSmallScreen) {
-      return;
-    }
-    if (selectedPoi) {
-      if (isWikiVisible) {
-        setMobileState('low');
-      } else {
-        setMobileState('high');
-      }
-    } else if (isExpanded) {
-      if (mobileState === 'hidden') {
-        setMobileState('medium');
-      }
-    } else {
-      setMobileState('hidden');
-    }
-  }, [isExpanded, selectedPoi, isSmallScreen, mobileState, isWikiVisible]);
 
   useEffect(() => {
     if (isSmallScreen) {
