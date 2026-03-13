@@ -40,6 +40,8 @@ interface FilterBarProps {
   onMapsRefresh?: () => void;
   weights?: string;
   onWeightsChange?: (weights: string) => void;
+  onShowWiki?: (url: string | null) => void;
+  isWikiVisible?: boolean;
 }
 
 export default function FilterBar({
@@ -63,6 +65,8 @@ export default function FilterBar({
   onMapsRefresh,
   weights = '',
   onWeightsChange,
+  onShowWiki,
+  isWikiVisible = false,
 }: FilterBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
@@ -70,6 +74,29 @@ export default function FilterBar({
   const [mobileState, setMobileState] = useState<'hidden' | 'low' | 'medium' | 'high'>('hidden');
   const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
   const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
+
+  // Sync mobileState with props during render to avoid cascading renders
+  const [prevPoi, setPrevPoi] = useState(selectedPoi);
+  const [prevWiki, setPrevWiki] = useState(isWikiVisible);
+  const [prevExpanded, setPrevExpanded] = useState(isExpanded);
+
+  if (selectedPoi !== prevPoi || isWikiVisible !== prevWiki || isExpanded !== prevExpanded) {
+    setPrevPoi(selectedPoi);
+    setPrevWiki(isWikiVisible);
+    setPrevExpanded(isExpanded);
+
+    if (isSmallScreen) {
+      if (selectedPoi) {
+        setMobileState(isWikiVisible ? 'low' : 'high');
+      } else if (isExpanded) {
+        if (mobileState === 'hidden') {
+          setMobileState('medium');
+        }
+      } else {
+        setMobileState('hidden');
+      }
+    }
+  }
 
   const selectedMap = maps.find(m => m.id === selectedMapId) || null;
 
@@ -103,22 +130,6 @@ export default function FilterBar({
       setMobileState('medium');
     }
   };
-
-  useEffect(() => {
-    if (!isSmallScreen) {
-      return;
-    }
-    if (selectedPoi) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setMobileState('high');
-    } else if (isExpanded) {
-      if (mobileState === 'hidden') {
-        setMobileState('medium');
-      }
-    } else {
-      setMobileState('hidden');
-    }
-  }, [isExpanded, selectedPoi, isSmallScreen, mobileState]);
 
   useEffect(() => {
     if (isSmallScreen) {
@@ -243,6 +254,7 @@ export default function FilterBar({
                 setInputValue={setInputValue}
                 maps={maps}
                 onMapClick={handleMapClickFromPoi}
+                onShowWiki={onShowWiki}
               />
             ) : viewMode === 'maps' ? (
               selectedMap ? (

@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import { IoClose } from 'react-icons/io5';
 import FilterBar from '../../components/FilterBar';
 import client from '../../lib/client';
 import { POI, Map as MapType } from '../../lib/types';
@@ -44,6 +45,7 @@ export default function DiscoverPage() {
   }, [selectedPoi]);
   const [hoveredPoi, setHoveredPoi] = useState<POI | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
+  const [wikiUrl, setWikiUrl] = useState<string | null>(null);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
   const lastFetchedCoords = useRef<{ lat: number; lng: number } | null>(null);
 
@@ -277,6 +279,10 @@ export default function DiscoverPage() {
     setHoveredPoi(poi);
   }, []);
 
+  useEffect(() => {
+    setWikiUrl(null);
+  }, [selectedPoi]);
+
   const targetLocation = React.useMemo(() => {
     const poi = focusedPoi || selectedPoi;
     if (!poi) {
@@ -312,9 +318,11 @@ export default function DiscoverPage() {
         onMapsRefresh={fetchMaps}
         weights={weights}
         onWeightsChange={handleWeightsChange}
+        onShowWiki={setWikiUrl}
+        isWikiVisible={!!wikiUrl}
       />
       <motion.div
-        className="absolute z-10 overflow-hidden shadow-2xl"
+        className="absolute z-10 overflow-hidden shadow-2xl bg-white"
         initial={false}
         animate={{
           top: isExpanded ? (isSmallScreen ? 0 : 12) : 0,
@@ -324,13 +332,29 @@ export default function DiscoverPage() {
           borderRadius: isExpanded ? (isSmallScreen ? 0 : 24) : 0,
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-        <MapComponent
-          onCenterChanged={handleMapMove}
-          mapPois={visibleMapPois}
-          onPoiClick={handlePoiSelect}
-          hoveredPoi={hoveredPoi}
-          targetLocation={targetLocation}
-        />
+        {wikiUrl ? (
+          <div className="relative w-full h-full flex flex-col pt-4">
+            <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100">
+              <h3 className="text-xl font-black text-gray-900 truncate">
+                {selectedPoi?.name} - Travel Guide
+              </h3>
+              <button
+                onClick={() => setWikiUrl(null)}
+                className="p-2 bg-gray-100 text-gray-900 rounded-full hover:bg-gray-200 transition-all flex items-center justify-center shadow-sm">
+                <IoClose size={24} />
+              </button>
+            </div>
+            <iframe src={wikiUrl} className="w-full flex-1 border-none" title="WikiVoyage" />
+          </div>
+        ) : (
+          <MapComponent
+            onCenterChanged={handleMapMove}
+            mapPois={visibleMapPois}
+            onPoiClick={handlePoiSelect}
+            hoveredPoi={hoveredPoi}
+            targetLocation={targetLocation}
+          />
+        )}
       </motion.div>
     </div>
   );
