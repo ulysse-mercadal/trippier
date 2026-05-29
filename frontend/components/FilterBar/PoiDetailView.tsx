@@ -24,9 +24,12 @@ import {
 import clsx from 'clsx';
 import Image from 'next/image';
 import { POI, Map } from '../../lib/types';
+import { isPoiEqual } from '../../lib/poi-utils';
 import CommentSection from './CommentSection';
 import MapSelectionModal from '../MapSelectionModal';
 import { useAuth } from '../../context/AuthContext';
+import { MdLocationOn } from 'react-icons/md';
+import { getPoiTypeInfo } from '../../lib/poi-type-utils';
 
 interface PoiDetailViewProps {
   selectedPoi: POI;
@@ -36,6 +39,7 @@ interface PoiDetailViewProps {
   setInputValue: (val: string) => void;
   maps?: Map[];
   onMapClick?: (mapId: number) => void;
+  onShowWiki?: (url: string | null) => void;
 }
 
 export default function PoiDetailView({
@@ -46,6 +50,7 @@ export default function PoiDetailView({
   setInputValue,
   maps = [],
   onMapClick,
+  onShowWiki,
 }: PoiDetailViewProps) {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -53,16 +58,8 @@ export default function PoiDetailView({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   const savedInMaps = useMemo(() => {
-    return maps.filter(m =>
-      m.pois?.some(p => {
-        const lat1 = Number(p.lat);
-        const lng1 = Number(p.lng);
-        const lat2 = Number(selectedPoi.lat);
-        const lng2 = Number(selectedPoi.lng);
-        return Math.abs(lat1 - lat2) < 0.0001 && Math.abs(lng1 - lng2) < 0.0001;
-      }),
-    );
-  }, [maps, selectedPoi.lat, selectedPoi.lng]);
+    return maps.filter(m => m.pois?.some(p => isPoiEqual(p, selectedPoi)));
+  }, [maps, selectedPoi]);
 
   const copyToClipboard = (text: string) => {
     if (copied) {
@@ -154,6 +151,24 @@ export default function PoiDetailView({
         )}>
         {selectedPoi.name}
       </h2>
+      {selectedPoi.type &&
+        (() => {
+          const typeInfo = getPoiTypeInfo(selectedPoi.type);
+          return (
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              <span className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border text-gray-600 bg-gray-100 border-gray-200">
+                <typeInfo.Icon size={13} />
+                {typeInfo.label}
+              </span>
+              {selectedPoi.coordsApproximate && selectedPoi.zone && (
+                <span className="text-xs font-bold text-gray-500 bg-gray-100 border border-gray-200 px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <MdLocationOn size={13} />
+                  Zone approximative · {selectedPoi.zone}
+                </span>
+              )}
+            </div>
+          );
+        })()}
       <div className="space-y-8">
         {selectedPoi.description ? (
           <section>
@@ -182,7 +197,11 @@ export default function PoiDetailView({
             <button
               onClick={() =>
                 window.open(
-                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedPoi.name + ' ' + selectedPoi.address)}`,
+                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    selectedPoi.address
+                      ? `${selectedPoi.name} ${selectedPoi.address}`
+                      : selectedPoi.name,
+                  )}`,
                   '_blank',
                 )
               }
@@ -228,7 +247,12 @@ export default function PoiDetailView({
             )}
             {selectedPoi.wikivoyageUrl ? (
               <button
-                onClick={() => selectedPoi.wikivoyageUrl && openUrl(selectedPoi.wikivoyageUrl)}
+                onClick={() =>
+                  selectedPoi.wikivoyageUrl &&
+                  (onShowWiki
+                    ? onShowWiki(selectedPoi.wikivoyageUrl)
+                    : openUrl(selectedPoi.wikivoyageUrl))
+                }
                 className="w-full flex items-center justify-between p-4 bg-white border-2 border-black text-black rounded-2xl hover:bg-gray-50 transition-all shadow-sm">
                 <span className="font-bold text-sm">Travel Guide</span>
                 <IoGlobeOutline size={18} />

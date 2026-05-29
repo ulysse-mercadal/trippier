@@ -55,6 +55,9 @@ export default function MapListItem({ map, onDelete, onUpdate, onClick }: MapLis
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setTitle(map.title);
+    setDescription(map.description || '');
+    setIcon(map.icon || '🌍');
     setIsEditing(true);
   };
 

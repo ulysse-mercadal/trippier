@@ -27,14 +27,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-
-interface RequestWithUser extends Request {
-  user: {
-    id: number;
-    email: string;
-    role: Role;
-  };
-}
+import { RequestWithUser } from '../common/request-with-user.interface';
 
 @ApiTags('users')
 @ApiBearerAuth()

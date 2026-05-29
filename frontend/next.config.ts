@@ -12,7 +12,7 @@ import fs from 'fs';
 import path from 'path';
 
 const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
+try {
   const envFile = fs.readFileSync(envPath, 'utf8');
   envFile.split('\n').forEach(line => {
     const [key, ...valueParts] = line.split('=');
@@ -24,6 +24,8 @@ if (fs.existsSync(envPath)) {
       process.env[key.trim()] = value;
     }
   });
+} catch {
+  // .env file not present — rely on environment variables directly
 }
 
 const nextConfig: NextConfig = {

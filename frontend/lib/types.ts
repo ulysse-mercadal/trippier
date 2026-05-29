@@ -41,6 +41,9 @@ export interface POI {
   officialWebsite?: string | null;
   phoneNumber?: string | null;
   description?: string | null;
+  zone?: string;
+  zoneQuery?: string;
+  coordsApproximate?: boolean;
   comments?: Comment[];
 }
 

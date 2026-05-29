@@ -14,9 +14,12 @@ import { motion } from 'framer-motion';
 import { IoBookmark, IoTrash } from 'react-icons/io5';
 import clsx from 'clsx';
 import { POI, Map } from '../../lib/types';
+import { isPoiEqual } from '../../lib/poi-utils';
 import MapSelectionModal from '../MapSelectionModal';
 import { TbZoomInArea } from 'react-icons/tb';
 import { useAuth } from '../../context/AuthContext';
+import { MdLocationOn } from 'react-icons/md';
+import { getPoiTypeInfo } from '../../lib/poi-type-utils';
 
 interface PoiCardProps {
   poi: POI;
@@ -45,14 +48,8 @@ export default function PoiCard({
   const { user } = useAuth();
 
   const savedCount = useMemo(() => {
-    return maps.filter(m =>
-      m.pois?.some(
-        p =>
-          Number(p.lat).toFixed(6) === Number(poi.lat).toFixed(6) &&
-          Number(p.lng).toFixed(6) === Number(poi.lng).toFixed(6),
-      ),
-    ).length;
-  }, [maps, poi.lat, poi.lng]);
+    return maps.filter(m => m.pois?.some(p => isPoiEqual(p, poi))).length;
+  }, [maps, poi]);
 
   return (
     <>
@@ -112,15 +109,31 @@ export default function PoiCard({
             )}
           </div>
         </div>
-        {poi.distance !== undefined && (
-          <div className="flex items-center">
+        <div className="flex items-center gap-2 flex-wrap mt-1">
+          {poi.distance !== undefined && (
             <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg">
               {poi.distance < 1
                 ? `${(poi.distance * 1000).toFixed(0)}m`
                 : `${poi.distance.toFixed(1)}km`}
             </span>
-          </div>
-        )}
+          )}
+          {poi.type &&
+            (() => {
+              const typeInfo = getPoiTypeInfo(poi.type);
+              return (
+                <span className="text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 text-gray-600 bg-gray-100">
+                  <typeInfo.Icon size={11} />
+                  {typeInfo.label}
+                </span>
+              );
+            })()}
+          {poi.coordsApproximate && poi.zone && (
+            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-lg flex items-center gap-1">
+              <MdLocationOn size={11} />
+              {poi.zone}
+            </span>
+          )}
+        </div>
       </motion.div>
       <MapSelectionModal
         isOpen={isSaveModalOpen}

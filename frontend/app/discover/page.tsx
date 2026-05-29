@@ -12,10 +12,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import { IoClose } from 'react-icons/io5';
 import FilterBar from '../../components/FilterBar';
 import client from '../../lib/client';
 import { POI, Map as MapType } from '../../lib/types';
 import { useAuth } from '../../context/AuthContext';
+import { fetchZonePolygon } from '../../lib/zone-polygon';
 
 const MapComponent = dynamic(() => import('../../components/Map'), {
   ssr: false,
@@ -43,9 +45,14 @@ export default function DiscoverPage() {
     selectedPoiRef.current = selectedPoi;
   }, [selectedPoi]);
   const [hoveredPoi, setHoveredPoi] = useState<POI | null>(null);
+  const [wikiUrl, setWikiUrl] = useState<string | null>(null);
+  const [hoveredZone, setHoveredZone] = useState<GeoJSON.Feature | null>(null);
+  const [resultZones, setResultZones] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [searchZone, setSearchZone] = useState<string | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
   const lastFetchedCoords = useRef<{ lat: number; lng: number } | null>(null);
+  const loadingCount = useRef(0);
 
   useEffect(() => {
     const checkSize = () => {
@@ -55,6 +62,61 @@ export default function DiscoverPage() {
     window.addEventListener('resize', checkSize);
     return () => window.removeEventListener('resize', checkSize);
   }, []);
+
+  // Blue: zone of the hovered/selected POI
+  useEffect(() => {
+    const poi = hoveredPoi?.coordsApproximate
+      ? hoveredPoi
+      : selectedPoi?.coordsApproximate
+        ? selectedPoi
+        : null;
+    if (!poi?.zone) {
+      setHoveredZone(null);
+      return;
+    }
+    let cancelled = false;
+    fetchZonePolygon(poi.zoneQuery || poi.zone || '').then(poly => {
+      if (!cancelled) {
+        setHoveredZone(poly);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hoveredPoi, selectedPoi]);
+
+  // Red: search zone + all zones with approximate results
+  useEffect(() => {
+    const allPois = [...nearbyPois, ...searchResults];
+    const approxQueries = allPois
+      .filter(p => p.coordsApproximate && (p.zoneQuery || p.zone))
+      .map(p => p.zoneQuery || (p.zone as string));
+    const searchZoneQuery = searchZone
+      ? searchZone.includes('/')
+        ? searchZone.split('/').reverse().join(', ')
+        : searchZone
+      : null;
+    const uniqueQueries = [
+      ...new Set([...(searchZoneQuery ? [searchZoneQuery] : []), ...approxQueries]),
+    ];
+    if (uniqueQueries.length === 0) {
+      setResultZones(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all(uniqueQueries.map(q => fetchZonePolygon(q))).then(polygons => {
+      if (cancelled) {
+        return;
+      }
+      const features = polygons.filter(
+        (p): p is GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> => p !== null,
+      );
+      setResultZones(features.length > 0 ? { type: 'FeatureCollection', features } : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [nearbyPois, searchResults, searchZone]);
 
   const fetchMaps = useCallback(async () => {
     if (!token) {
@@ -72,6 +134,10 @@ export default function DiscoverPage() {
       fetchMaps();
     }
   }, [token, fetchMaps]);
+
+  useEffect(() => {
+    fetchNearby(lastCoords.current.lat, lastCoords.current.lng, weights);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDeleteMap = async (id: number) => {
     if (!token) {
@@ -133,16 +199,25 @@ export default function DiscoverPage() {
   }, [searchResults, focusedPoi]);
 
   const fetchNearby = useCallback(async (lat: number, lng: number, currentWeights: string) => {
-    try {
+    if (loadingCount.current === 0) {
       setLoading(true);
+    }
+    loadingCount.current++;
+    try {
       const response = await client.get('/discover/nearby', {
         params: { lat, lng, radius: 5, weights: currentWeights },
       });
-      setNearbyPois(response.data);
+      setNearbyPois(response.data.pois ?? response.data);
+      if (response.data.searchZone !== undefined) {
+        setSearchZone(response.data.searchZone);
+      }
     } catch (error) {
       console.error('Failed to fetch nearby POIs:', error);
     } finally {
-      setLoading(false);
+      loadingCount.current--;
+      if (loadingCount.current === 0) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -152,16 +227,25 @@ export default function DiscoverPage() {
         setSearchResults([]);
         return;
       }
-      try {
+      if (loadingCount.current === 0) {
         setLoading(true);
+      }
+      loadingCount.current++;
+      try {
         const response = await client.get('/discover/nearby', {
           params: { lat, lng, radius: 50, q, weights: currentWeights },
         });
-        setSearchResults(response.data);
+        setSearchResults(response.data.pois ?? response.data);
+        if (response.data.searchZone !== undefined) {
+          setSearchZone(response.data.searchZone);
+        }
       } catch (error) {
         console.error('Failed to fetch search results:', error);
       } finally {
-        setLoading(false);
+        loadingCount.current--;
+        if (loadingCount.current === 0) {
+          setLoading(false);
+        }
       }
     },
     [],
@@ -277,6 +361,10 @@ export default function DiscoverPage() {
     setHoveredPoi(poi);
   }, []);
 
+  useEffect(() => {
+    setWikiUrl(null);
+  }, [selectedPoi]);
+
   const targetLocation = React.useMemo(() => {
     const poi = focusedPoi || selectedPoi;
     if (!poi) {
@@ -286,6 +374,7 @@ export default function DiscoverPage() {
       lat: typeof poi.lat === 'string' ? parseFloat(poi.lat) : poi.lat,
       lng: typeof poi.lng === 'string' ? parseFloat(poi.lng) : poi.lng,
       id: poi.place_id,
+      approximate: poi.coordsApproximate === true,
     };
   }, [focusedPoi, selectedPoi]);
 
@@ -312,9 +401,11 @@ export default function DiscoverPage() {
         onMapsRefresh={fetchMaps}
         weights={weights}
         onWeightsChange={handleWeightsChange}
+        onShowWiki={setWikiUrl}
+        isWikiVisible={!!wikiUrl}
       />
       <motion.div
-        className="absolute z-10 overflow-hidden shadow-2xl"
+        className="absolute z-10 overflow-hidden shadow-2xl bg-white"
         initial={false}
         animate={{
           top: isExpanded ? (isSmallScreen ? 0 : 12) : 0,
@@ -324,13 +415,31 @@ export default function DiscoverPage() {
           borderRadius: isExpanded ? (isSmallScreen ? 0 : 24) : 0,
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-        <MapComponent
-          onCenterChanged={handleMapMove}
-          mapPois={visibleMapPois}
-          onPoiClick={handlePoiSelect}
-          hoveredPoi={hoveredPoi}
-          targetLocation={targetLocation}
-        />
+        {wikiUrl ? (
+          <div className="relative w-full h-full flex flex-col pt-4">
+            <div className="flex items-center justify-between px-6 pb-4 border-b border-gray-100">
+              <h3 className="text-xl font-black text-gray-900 truncate">
+                {selectedPoi?.name} - Travel Guide
+              </h3>
+              <button
+                onClick={() => setWikiUrl(null)}
+                className="p-2 bg-gray-100 text-gray-900 rounded-full hover:bg-gray-200 transition-all flex items-center justify-center shadow-sm">
+                <IoClose size={24} />
+              </button>
+            </div>
+            <iframe src={wikiUrl} className="w-full flex-1 border-none" title="WikiVoyage" />
+          </div>
+        ) : (
+          <MapComponent
+            onCenterChanged={handleMapMove}
+            mapPois={visibleMapPois}
+            onPoiClick={handlePoiSelect}
+            hoveredPoi={hoveredPoi}
+            targetLocation={targetLocation}
+            hoveredZone={hoveredZone}
+            resultZones={resultZones}
+          />
+        )}
       </motion.div>
     </div>
   );
