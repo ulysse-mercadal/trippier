@@ -194,8 +194,8 @@ const TabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation })
   const indicatorLeft = useSharedValue(targets[activeIdx].left);
   const indicatorWidth = useSharedValue(targets[activeIdx].width);
 
-  const lefts = [l0, l1, l2, l3, l4];
-  const widths = [w0, w1, w2, w3, w4];
+  const lefts = useMemo(() => [l0, l1, l2, l3, l4], [l0, l1, l2, l3, l4]);
+  const widths = useMemo(() => [w0, w1, w2, w3, w4], [w0, w1, w2, w3, w4]);
 
   useEffect(() => {
     const timing = { duration: ANIM_DURATION, easing: EASE };

@@ -109,6 +109,11 @@ export const AuthGateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         onAuthed();
         return;
       }
+      const previousPending = pendingRef.current;
+      pendingRef.current = null;
+      if (previousPending) {
+        previousPending.reject(new Error('Auth gate superseded'));
+      }
       onAuthedRef.current = onAuthed;
       setAction(target);
       setVisible(true);
@@ -120,6 +125,11 @@ export const AuthGateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     (target: GateAction): Promise<void> => {
       if (signedIn) {
         return Promise.resolve();
+      }
+      const previousPending = pendingRef.current;
+      onAuthedRef.current = null;
+      if (previousPending) {
+        previousPending.reject(new Error('Auth gate superseded'));
       }
       return new Promise<void>((resolve, reject) => {
         pendingRef.current = { resolve, reject };

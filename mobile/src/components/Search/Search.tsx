@@ -27,6 +27,7 @@ export interface SearchProps extends Omit<TextInputProps, 'style'> {
   trailing?: React.ReactNode;
   onPress?: () => void;
   readOnly?: boolean;
+  accessibilityLabel?: string;
   style?: ViewStyle;
 }
 
@@ -50,6 +51,7 @@ const Search: React.FC<SearchProps> = ({
   trailing,
   onPress,
   readOnly = false,
+  accessibilityLabel,
   style,
   ...rest
 }) => {
@@ -57,6 +59,8 @@ const Search: React.FC<SearchProps> = ({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="search"
+      accessibilityLabel={accessibilityLabel ?? placeholder}
       style={[
         styles.base,
         {

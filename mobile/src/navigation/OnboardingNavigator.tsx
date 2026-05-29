@@ -11,12 +11,9 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import OnboardingPager from '../screens/onboarding/OnboardingPager';
 import AuthScreen from '../screens/auth/AuthScreen';
-import type { AuthMode } from './types';
+import type { OnboardingStackParamList } from './types';
 
-export type OnboardingStackParamList = {
-  Pager: undefined;
-  Auth: { initialMode: AuthMode };
-};
+export type { OnboardingStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
 

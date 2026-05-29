@@ -28,7 +28,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
         path: 'auth',
         screens: {
           Auth: 'sign-in',
-          ForgotPassword: 'forgot',
         },
       },
       Main: {

@@ -62,7 +62,7 @@ function resolveVariant(
         borderWidth: 0,
       };
     case 'ink':
-      return { background: colors.ink, color: '#ffffff', borderColor: 'transparent', borderWidth: 0 };
+      return { background: colors.ink, color: colors.onEmerald, borderColor: 'transparent', borderWidth: 0 };
     case 'text':
       return {
         background: 'transparent',

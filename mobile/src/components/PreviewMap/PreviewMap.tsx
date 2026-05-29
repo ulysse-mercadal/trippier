@@ -7,7 +7,7 @@
 //
 // **************************************************************************
 
-import React from 'react';
+import React, { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, {
   Circle,
@@ -49,6 +49,7 @@ export interface PreviewMapProps {
 const PreviewMap: React.FC<PreviewMapProps> = ({ palette, surfaceColor, height = 150 }) => {
   const fadeY = VIEW * (1 - FADE_HEIGHT_PCT);
   const fadeH = VIEW * FADE_HEIGHT_PCT;
+  const gradientId = `m-card-media-fade-${useId()}`;
   return (
     <View style={[styles.wrap, { height, backgroundColor: palette.bg }]}>
       <Svg
@@ -57,7 +58,7 @@ const PreviewMap: React.FC<PreviewMapProps> = ({ palette, surfaceColor, height =
         viewBox={`0 0 ${VIEW} ${VIEW}`}
         preserveAspectRatio="xMidYMid slice">
         <Defs>
-          <LinearGradient id="m-card-media-fade" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={surfaceColor} stopOpacity={0} />
             <Stop offset="0.25" stopColor={surfaceColor} stopOpacity={0.35} />
             <Stop offset="0.6" stopColor={surfaceColor} stopOpacity={0.85} />
@@ -163,7 +164,7 @@ const PreviewMap: React.FC<PreviewMapProps> = ({ palette, surfaceColor, height =
           y={fadeY}
           width={VIEW}
           height={fadeH}
-          fill="url(#m-card-media-fade)"
+          fill={`url(#${gradientId})`}
         />
       </Svg>
     </View>

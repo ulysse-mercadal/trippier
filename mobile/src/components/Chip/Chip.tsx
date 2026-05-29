@@ -44,7 +44,7 @@ const Chip: React.FC<ChipProps> = ({
       ? theme.colors.emeraldSoft
       : theme.colors.surface;
   const textColor = isSolid
-    ? '#ffffff'
+    ? theme.colors.onEmerald
     : active
       ? theme.colors.emeraldDeep
       : theme.colors.ink2;

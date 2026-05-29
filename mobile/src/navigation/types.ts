@@ -20,10 +20,12 @@ export type RootStackParamList = {
 };
 
 /**
- * Single-screen onboarding stack — Welcome only.
+ * Onboarding stack — hosts the pager + an optional modal Auth route used
+ * by the AccountSlide "sign in or create account" CTA.
  */
 export type OnboardingStackParamList = {
-  Welcome: undefined;
+  Pager: undefined;
+  Auth: { initialMode?: AuthMode } | undefined;
 };
 
 /**
@@ -68,7 +70,6 @@ export type YouStackParamList = {
  */
 export type AuthStackParamList = {
   Auth: { initialMode?: AuthMode } | undefined;
-  ForgotPassword: undefined;
 };
 
 /**

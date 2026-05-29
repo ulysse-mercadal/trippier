@@ -43,7 +43,7 @@ function resolvePalette(
     case 'emerald':
       return { background: colors.emeraldSoft, color: colors.emeraldDeep };
     case 'ink':
-      return { background: colors.ink, color: '#ffffff' };
+      return { background: colors.ink, color: colors.onEmerald };
     case 'default':
     default:
       return { background: colors.surface2, color: colors.ink2 };

@@ -27,22 +27,26 @@ interface PinProps {
  * @param props - {@link PinProps}.
  * @returns A positioned circular badge with the supplied icon.
  */
-const Pin: React.FC<PinProps> = ({ top, left, Icon, bg, iconColor, size = 56 }) => (
-  <View
-    style={[
-      styles.pin,
-      {
-        top,
-        left,
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: bg,
-      },
-    ]}>
-    <Icon size={size * 0.42} color={iconColor} stroke={1.8} />
-  </View>
-);
+const Pin: React.FC<PinProps> = ({ top, left, Icon, bg, iconColor, size = 56 }) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.pin,
+        theme.shadows.e1,
+        {
+          top,
+          left,
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: bg,
+        },
+      ]}>
+      <Icon size={size * 0.42} color={iconColor} stroke={1.8} />
+    </View>
+  );
+};
 
 /**
  * Hero illustration for the "Save & curate" slide — a constellation of
@@ -101,11 +105,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#18211d',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
 });
 
