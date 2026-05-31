@@ -8,6 +8,23 @@
 // **************************************************************************
 
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { PoiProvider, PoiType } from '../api/pois';
+
+/**
+ * A single back-to-source link displayed in the POI detail "Sources" section.
+ * Computed by the caller from `EnrichedPoi.providers_data` so the screen
+ * doesn't need to know how to derive URLs per provider.
+ */
+export interface PoiSourceLink {
+  provider: PoiProvider;
+  url: string;
+  /**
+   * Optional Wikidata ID — exposed separately so the screen can also offer a
+   * "View on Wikidata" link when the POI is wikidata-linked, even though
+   * Wikidata is not itself a provider.
+   */
+  wikidataId?: string;
+}
 
 /**
  * Root stack — either the onboarding Welcome screen (first launch) or the
@@ -43,6 +60,23 @@ export type TabParamList = {
 /** Discover tab stack routes. */
 export type DiscoverStackParamList = {
   DiscoverHome: undefined;
+  PoiDetail: {
+    name: string;
+    type: PoiType;
+    lat?: number;
+    lng?: number;
+    description?: string;
+    /**
+     * Canonical links back to each upstream provider for this POI.
+     * Rendered as the "Sources" section. Empty/absent ⇒ section hidden.
+     */
+    sources?: PoiSourceLink[];
+    /**
+     * Optional Wikidata ID surfaced as an additional source link
+     * (Wikidata is not a provider but a useful canonical reference).
+     */
+    wikidataId?: string;
+  };
 };
 
 /** Plan tab stack routes. */

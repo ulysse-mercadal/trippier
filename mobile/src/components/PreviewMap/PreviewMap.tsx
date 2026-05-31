@@ -32,6 +32,7 @@ export interface PreviewMapProps {
   palette: MapPalette;
   surfaceColor: string;
   height?: number;
+  fade?: boolean;
 }
 
 /**
@@ -39,14 +40,23 @@ export interface PreviewMapProps {
  *
  * Recreates exactly the same parks, water, road grid + main roads,
  * intersection dots, selection polygon and three italic location labels
- * as the design source. The bottom 46% carries the same
- * `linear-gradient(180deg, transparent, surface 88%)` fade as the v4
- * `.m-card-media::after` so the map blends into the card body.
+ * as the design source.
+ *
+ * The bottom 46% carries the same `linear-gradient(180deg, transparent,
+ * surface 88%)` fade as the v4 `.m-card-media::after` so the map blends
+ * into the card body. The fade can be disabled with `fade={false}` —
+ * mandatory whenever the SVG stands in for the live Discover map, per the
+ * v4 handoff ("keep the media fade off the live map").
  *
  * @param props - {@link PreviewMapProps}.
  * @returns A full-bleed SVG sample of the picked map palette.
  */
-const PreviewMap: React.FC<PreviewMapProps> = ({ palette, surfaceColor, height = 150 }) => {
+const PreviewMap: React.FC<PreviewMapProps> = ({
+  palette,
+  surfaceColor,
+  height = 150,
+  fade = true,
+}) => {
   const fadeY = VIEW * (1 - FADE_HEIGHT_PCT);
   const fadeH = VIEW * FADE_HEIGHT_PCT;
   const gradientId = `m-card-media-fade-${useId()}`;
@@ -159,13 +169,15 @@ const PreviewMap: React.FC<PreviewMapProps> = ({ palette, surfaceColor, height =
           rives de Sant
         </SvgText>
 
-        <Rect
-          x="0"
-          y={fadeY}
-          width={VIEW}
-          height={fadeH}
-          fill={`url(#${gradientId})`}
-        />
+        {fade ? (
+          <Rect
+            x="0"
+            y={fadeY}
+            width={VIEW}
+            height={fadeH}
+            fill={`url(#${gradientId})`}
+          />
+        ) : null}
       </Svg>
     </View>
   );

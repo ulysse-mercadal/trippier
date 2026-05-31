@@ -16,7 +16,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { SwipeableTabBarProps } from '../../navigation/SwipeableTabNavigator';
 import type { SharedValue } from 'react-native-reanimated';
 import { Compass, Route, Users, Grid, User } from '../icons';
 import type { IconProps } from '../icons';
@@ -171,10 +171,10 @@ const TabCell: React.FC<TabCellProps> = ({
  * at its icon-only size. The emerald indicator chip slides + resizes
  * independently.
  *
- * @param props - {@link BottomTabBarProps} forwarded by React Navigation.
+ * @param props - {@link SwipeableTabBarProps} forwarded by the custom tab navigator.
  * @returns The rendered tab bar.
  */
-const TabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+const TabBar: React.FC<SwipeableTabBarProps> = ({ state, descriptors, navigation }) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const activeIdx = state.index;

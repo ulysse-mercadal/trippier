@@ -8,31 +8,37 @@
 // **************************************************************************
 
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import TabBar from '../components/TabBar';
 import DiscoverStack from './stacks/DiscoverStack';
 import PlanStack from './stacks/PlanStack';
 import FriendsStack from './stacks/FriendsStack';
 import ToolsStack from './stacks/ToolsStack';
 import YouStack from './stacks/YouStack';
+import { createSwipeableTabNavigator } from './SwipeableTabNavigator';
 import type { TabParamList } from './types';
 
-const Tab = createBottomTabNavigator<TabParamList>();
+const Tab = createSwipeableTabNavigator<TabParamList>();
 
 /**
- * Bottom-tab navigator hosting the five top-level stacks of the app.
+ * Top-level tab navigator hosting the five v4 stacks.
  *
- * The visual chrome is provided by the custom {@link TabBar} component so the
- * navigator stays focused on routing. Tab order matches the v4 design spec:
- * Discover, Plan, Friends, Tools, You.
+ * Built on the custom {@link createSwipeableTabNavigator} — screens are laid
+ * out side-by-side and a pan gesture drives the horizontal translate so the
+ * destination screen is revealed from the swipe edge in real time, then
+ * snapped on release. From a React Navigation point of view it behaves like
+ * a regular tab navigator (deep linking, focus events, `navigate('Plan')`
+ * etc.), so the custom {@link TabBar} keeps reading state + descriptors as
+ * before.
  *
- * @returns The configured `BottomTabNavigator`.
+ * @returns The configured tab navigator.
  */
 const TabNavigator: React.FC = () => (
-  <Tab.Navigator
-    screenOptions={{ headerShown: false }}
-    tabBar={props => <TabBar {...props} />}>
-    <Tab.Screen name="Discover" component={DiscoverStack} />
+  <Tab.Navigator tabBar={props => <TabBar {...props} />}>
+    <Tab.Screen
+      name="Discover"
+      component={DiscoverStack}
+      options={{ swipeEnabled: false }}
+    />
     <Tab.Screen name="Plan" component={PlanStack} />
     <Tab.Screen name="Friends" component={FriendsStack} />
     <Tab.Screen name="Tools" component={ToolsStack} />
