@@ -10,6 +10,12 @@ on:
       - main
       - dev
 
+# Cancel superseded runs on a PR branch so the slow Android build doesn't keep
+# churning for commits that have already been replaced.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -113,6 +119,7 @@ jobs:
         env:
           API_URL: http://localhost:3001
 
+  # Fast checks — run on every mobile change (PR or push).
   mobile:
     needs: changes
     if: ${{ needs.changes.outputs.mobile == 'true' }}
@@ -129,6 +136,23 @@ jobs:
       - name: Lint
         working-directory: ./mobile
         run: bun run lint
+
+  # The full Android build is slow (~8 min), so only run it on PRs heading to
+  # main (release candidates). dev PRs are covered by the lint above, and pushes
+  # to main / tags are already built by release-apk.yml. Gradle is cached.
+  mobile-android:
+    needs: [changes, mobile]
+    if: ${{ needs.changes.outputs.mobile == 'true' && github.event_name == 'pull_request' && github.base_ref == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        working-directory: ./mobile
+        run: bun install --frozen-lockfile
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -136,6 +160,8 @@ jobs:
           java-version: '17'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v4
       - name: Create .env file
         run: |
           echo "API_URL=${{ secrets.API_URL }}" >> .env
@@ -143,4 +169,4 @@ jobs:
         working-directory: ./mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --no-daemon
