@@ -1,0 +1,125 @@
+name: Build, Push & Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+
+jobs:
+  backend:
+    name: backend image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/trippier-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=,format=long
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  frontend:
+    name: frontend image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/trippier-frontend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=,format=long
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # MAPTILER_* / API_URL are baked into the client bundle at build time.
+          build-args: |
+            API_URL=${{ secrets.API_URL }}
+            MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}
+            MAPTILER_MAP_ID=${{ secrets.MAPTILER_MAP_ID }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy the exact commit that was just built. Pins IMAGE_TAG to the commit SHA
+  # (immutable -> rollback-able) and waits on container healthchecks.
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - name: Pull the pinned images and roll out
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -e
+            cd ~/trippier
+
+            # Refresh the compose file; .env is untracked on the host and preserved.
+            git fetch origin main && git reset --hard origin/main
+
+            # Pin the exact image tag to deploy.
+            grep -v '^IMAGE_TAG=' .env > .env.tmp 2>/dev/null && mv .env.tmp .env || true
+            echo "IMAGE_TAG=${IMAGE_TAG}" >> .env
+
+            # Log in to GHCR, pull the pinned images, roll out waiting on healthchecks.
+            echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            sudo docker compose -f docker-compose.prod.yaml pull
+            sudo docker compose -f docker-compose.prod.yaml up -d --remove-orphans --wait --wait-timeout 180
+            sudo docker logout ghcr.io
+
+            sudo docker image prune -f

@@ -19,24 +19,18 @@ jobs:
       mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Detect Changes
+      # Robustly detects changed paths for the whole PR (vs base) or push (vs
+      # before), instead of only diffing the last commit.
+      - uses: dorny/paths-filter@v3
         id: filter
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            # On compare le dernier commit de la branche source (HEAD^2) par rapport à son parent
-            echo "Comparing last commit of PR branch"
-            git diff --name-only HEAD^2~1 HEAD^2 > changes.txt
-          else
-            # On compare le dernier commit poussé par rapport à son parent
-            echo "Comparing HEAD~1 to HEAD"
-            git diff --name-only HEAD~1 HEAD > changes.txt
-          fi
-          cat changes.txt
-          if grep -q "^backend/" changes.txt; then echo "backend=true" >> $GITHUB_OUTPUT; else echo "backend=false" >> $GITHUB_OUTPUT; fi
-          if grep -q "^frontend/" changes.txt; then echo "frontend=true" >> $GITHUB_OUTPUT; else echo "frontend=false" >> $GITHUB_OUTPUT; fi
-          if grep -q "^mobile/" changes.txt; then echo "mobile=true" >> $GITHUB_OUTPUT; else echo "mobile=false" >> $GITHUB_OUTPUT; fi
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            mobile:
+              - 'mobile/**'
 
   backend:
     needs: changes

@@ -7,109 +7,92 @@
 //
 // **************************************************************************
 
-import React from 'react';
-import { StatusBar, View, ActivityIndicator } from 'react-native';
-import { NavigationContainer, DarkTheme } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ThemeProvider } from './src/theme/ThemeProvider';
+import { AuthProvider } from './src/context/AuthContext';
+import { OnboardingProvider } from './src/context/OnboardingContext';
+import {
+  AuthGateProvider,
+  navigationRef,
+} from './src/context/AuthGateContext';
+import RootNavigator from './src/navigation/RootNavigator';
+import { linking } from './src/navigation/linking';
+import { loadFonts } from './src/lib/fonts';
 
-import DiscoverScreen from './src/screens/DiscoverScreen';
-import PlanScreen from './src/screens/PlanScreen';
-import ConnectScreen from './src/screens/ConnectScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import CustomTabBar from './src/components/CustomTabBar';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
+/**
+ * Application entry point.
+ *
+ * Mounts the providers in the canonical wave-2 order:
+ * `SafeAreaProvider` → `GestureHandlerRootView` → `ThemeProvider` →
+ * `AuthProvider` → `OnboardingProvider` → `AuthGateProvider` →
+ * `NavigationContainer` → {@link RootNavigator}.
+ *
+ * The `AuthGateProvider` lives below `AuthProvider` (so it can read the
+ * signed-in state) and above the navigation tree (so the gated sheet can
+ * navigate to the auth modal via `navigationRef`).
+ *
+ * @returns The fully-wired application root component.
+ */
+function App(): React.JSX.Element {
+  const [fontsReady, setFontsReady] = useState(false);
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+  useEffect(() => {
+    let active = true;
+    loadFonts()
+      .catch(() => {})
+      .finally(() => {
+        if (active) {
+          setFontsReady(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-const NotionTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: '#000000',
-    card: '#1A1A1A',
-    text: '#FFFFFF',
-    border: '#2F3437',
-    primary: '#FFFFFF',
-  },
-};
-
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      tabBar={props => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}>
-      <Tab.Screen
-        name="Discover"
-        component={DiscoverScreen}
-        options={{
-          tabBarLabel: 'Discover',
-        }}
-      />
-      <Tab.Screen
-        name="Plan"
-        component={PlanScreen}
-        options={{
-          tabBarLabel: 'Plan',
-        }}
-      />
-      <Tab.Screen
-        name="Connect"
-        component={ConnectScreen}
-        options={{
-          tabBarLabel: 'Connect',
-        }}
-      />
-    </Tab.Navigator>
-  );
-}
-
-function Navigation() {
-  const { token, loading } = useAuth();
-
-  if (loading) {
+  if (!fontsReady) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#000',
-        }}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
+      <View style={styles.loader}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <ActivityIndicator color="#34d39c" />
       </View>
     );
   }
 
   return (
-    <NavigationContainer theme={NotionTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {token == null ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : (
-          <Stack.Screen name="Main" component={MainTabs} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.fill}>
+        <ThemeProvider>
+          <AuthProvider>
+            <OnboardingProvider>
+              <AuthGateProvider>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+                <NavigationContainer ref={navigationRef} linking={linking}>
+                  <RootNavigator />
+                </NavigationContainer>
+              </AuthGateProvider>
+            </OnboardingProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 
-function App(): React.JSX.Element {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#000000" />
-        <AuthProvider>
-          <Navigation />
-        </AuthProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
-}
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+  },
+  loader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000000',
+  },
+});
 
 export default App;
