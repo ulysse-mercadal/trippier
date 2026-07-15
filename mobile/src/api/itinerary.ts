@@ -104,7 +104,7 @@ const itineraryClient = axios.create({
 });
 
 /**
- * Calls the public itinerary-api `POST /itinerary/generate` endpoint.
+ * Calls the public itinerary-api `POST /v1/itinerary/generate` endpoint.
  *
  * Uses a dedicated axios instance keyed off `ITINERARY_API_URL`. The
  * `X-API-Key` header is injected when `ITINERARY_API_KEY` is defined.
@@ -116,7 +116,7 @@ export async function generateItinerary(
   payload: ItineraryGeneratePayload,
 ): Promise<ItineraryGenerateResponse> {
   const { data } = await itineraryClient.post<ItineraryGenerateResponse>(
-    '/itinerary/generate',
+    '/v1/itinerary/generate',
     payload,
   );
   return data;

@@ -1,59 +1,69 @@
+# Trippier — default stack: builds every service and publishes it on localhost.
+#
+#   make up    -> start detached (this file only)
+#   make dev   -> hot reload      (this file + docker-compose.override.yaml)
+#   make build -> build images    make push -> publish them to the registry
+#
+# `docker compose up` also auto-loads docker-compose.override.yaml (the dev layer).
+# Use `docker compose -f docker-compose.yaml up` to run this file on its own.
+
+name: trippier
+
+x-defaults: &defaults
+  restart: unless-stopped
+
 services:
   db:
     image: postgres:15-alpine
-    restart: always
+    <<: *defaults
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-ulysse-mercadal}/trippier-backend:${IMAGE_TAG:-latest}
     build:
       context: ./backend
-      target: builder
-    restart: always
+    <<: *defaults
+    env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       PORT: 3000
     ports:
-      - "${BACKEND_PORT}:3000"
-    volumes:
-      - ./backend:/app:z
-      - /app/node_modules
-    command: sh -c "bunx wait-on tcp:db:5432 && bunx prisma db push && bunx prisma db seed && bun run start:dev"
+      - "${BACKEND_PORT:-3001}:3000"
     depends_on:
-      - db
-    env_file:
-      - .env
+      db:
+        condition: service_healthy
 
   frontend:
+    image: ${REGISTRY:-ghcr.io}/${OWNER:-ulysse-mercadal}/trippier-frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
-      target: builder
       args:
         API_URL: ${API_URL}
         MAPTILER_API_KEY: ${MAPTILER_API_KEY}
         MAPTILER_MAP_ID: ${MAPTILER_MAP_ID}
-    restart: always
+    <<: *defaults
+    env_file: .env
     environment:
       API_URL: ${API_URL}
       MAPTILER_API_KEY: ${MAPTILER_API_KEY}
       MAPTILER_MAP_ID: ${MAPTILER_MAP_ID}
     ports:
-      - "${FRONTEND_PORT}:3000"
-    volumes:
-      - ./frontend:/app:z
-      - /app/node_modules
-      - /app/.next
-    command: bun run dev
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - backend
-    env_file:
-      - .env
+      backend:
+        condition: service_started
 
 volumes:
   postgres_data:

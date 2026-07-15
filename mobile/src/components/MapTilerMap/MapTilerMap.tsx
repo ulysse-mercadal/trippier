@@ -206,36 +206,39 @@ const MapTilerMap = forwardRef<MapTilerMapHandle, MapTilerMapProps>(function Map
     },
   }), [zoom]);
 
-  // Slow orbit around `center` — drives a long `easeTo` heading animation in
-  // back-to-back segments so MapLibre keeps the rotation on its own thread
-  // (no per-frame JS bridge traffic). Each segment overshoots its caller in
-  // the next tick, which replaces the running animation seamlessly.
+  // Slow orbit around `center` — drives a chain of `linearTo` heading
+  // animations. Each segment runs at constant angular velocity (no ease-in /
+  // ease-out) and the next setCamera fires **before** the current one ends,
+  // so the running animation is replaced while still moving at full speed.
+  // That seamlessly hides the "stop, pause, restart" cadence an `easeTo`
+  // chain would produce. Heading is never wrapped to keep MapLibre rotating
+  // in a single consistent direction — passing the unbounded angle lets it
+  // resolve the rotation direction itself without a backwards snap on
+  // crossing 360°.
   useEffect(() => {
     if (!autoRotate) {return;}
-    const SEGMENT_DEG = 60;
-    const SEGMENT_MS = 8000;
+    const SEGMENT_DEG = 90;
+    const SEGMENT_MS = 6000;
+    const CHAIN_AT_MS = SEGMENT_MS - 250;
     let heading = 0;
     let mounted = true;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const tick = (): void => {
       if (!mounted) {return;}
-      heading = (heading + SEGMENT_DEG) % 360;
+      heading += SEGMENT_DEG;
       cameraRef.current?.setCamera({
-        centerCoordinate: [center.lng, center.lat],
         heading,
-        pitch,
-        zoomLevel: zoom,
         animationDuration: SEGMENT_MS,
-        animationMode: 'easeTo',
+        animationMode: 'linearTo',
       });
-      timeoutId = setTimeout(tick, SEGMENT_MS);
+      timeoutId = setTimeout(tick, CHAIN_AT_MS);
     };
     timeoutId = setTimeout(tick, 400);
     return () => {
       mounted = false;
       if (timeoutId) {clearTimeout(timeoutId);}
     };
-  }, [autoRotate, center.lat, center.lng, pitch, zoom]);
+  }, [autoRotate]);
 
   const handlePinPress = (event: { features: GeoJSON.Feature[] }): void => {
     const feature = event.features[0];

@@ -44,62 +44,42 @@ export function providerLabel(provider: PoiProvider): string {
 
 /**
  * Extracts the list of back-to-source links from an EnrichedPoi by walking
- * its `providers_data` map. The primary source (first in `sources`) comes
- * first so the section's top link is the canonical one. Providers that did
- * not expose a `source_url` are silently dropped.
+ * its `sources` array (each entry now carries its provider + canonical URL
+ * directly — no more `providers_data` map to consult). Order is preserved so
+ * the primary source stays first. Entries without a URL are silently dropped.
  *
- * @param poi - Enriched POI returned by `/pois/search`.
+ * @param poi - Enriched POI returned by `/v1/pois/search`.
  * @returns An ordered list of source links suitable for the Sources section.
  */
 export function buildSourceLinks(poi: EnrichedPoi): PoiSourceLink[] {
-  const data = poi.providers_data ?? {};
+  if (!poi.sources) {
+    return [];
+  }
   const seen = new Set<PoiProvider>();
   const links: PoiSourceLink[] = [];
-
-  // Primary first so the top of the section matches `poi.sources[0]`.
-  for (const provider of poi.sources) {
-    if (seen.has(provider)) {
+  for (const src of poi.sources) {
+    if (!src?.url || seen.has(src.provider)) {
       continue;
     }
-    const entry = data[provider];
-    if (entry?.source_url) {
-      links.push({ provider, url: entry.source_url });
-      seen.add(provider);
-    }
+    links.push({ provider: src.provider, url: src.url });
+    seen.add(src.provider);
   }
-
-  // Catch any provider present in providers_data but missing from sources
-  // (defensive — the backend keeps them in sync, but a stale cache could not).
-  for (const key of Object.keys(data) as PoiProvider[]) {
-    if (seen.has(key)) {
-      continue;
-    }
-    const entry = data[key];
-    if (entry?.source_url) {
-      links.push({ provider: key, url: entry.source_url });
-      seen.add(key);
-    }
-  }
-
   return links;
 }
 
 /**
- * Returns the Wikidata ID associated with the POI, if any. Pulled from the
- * first provider entry that carries one (typically Wikipedia or Overpass).
+ * Returns the Wikidata ID associated with the POI.
  *
- * @param poi - Enriched POI returned by `/pois/search`.
- * @returns The Wikidata Q-id or undefined.
+ * The current `/v1/pois/search` schema does not surface `wikidata_id` at the
+ * `EnrichedPoi` top level — it lived inside the removed `providers_data`
+ * map. Until the backend exposes it again this helper always returns
+ * undefined; the consumer (SourcesSection) skips the Wikidata link when
+ * absent.
+ *
+ * @param _poi - Enriched POI (kept in the signature so reintroducing the
+ *               field later is a one-line change).
+ * @returns Always undefined for now.
  */
-export function extractWikidataId(poi: EnrichedPoi): string | undefined {
-  const data = poi.providers_data;
-  if (!data) {
-    return undefined;
-  }
-  for (const entry of Object.values(data)) {
-    if (entry?.wikidata_id) {
-      return entry.wikidata_id;
-    }
-  }
+export function extractWikidataId(_poi: EnrichedPoi): string | undefined {
   return undefined;
 }

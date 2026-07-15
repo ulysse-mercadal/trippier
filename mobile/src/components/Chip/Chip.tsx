@@ -85,10 +85,17 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
     alignSelf: 'flex-start',
+    justifyContent: 'center',
   },
   label: {
     fontSize: 13.5,
+    lineHeight: 18,
     letterSpacing: -0.05,
+    // Android adds asymmetric font padding that pushes the label up and clips
+    // ascenders/accents; drop it and centre the glyph in an explicit line box
+    // so the label renders fully inside the pill.
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
 

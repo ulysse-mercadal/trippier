@@ -8,12 +8,13 @@
 // **************************************************************************
 
 import type { NavigatorScreenParams } from '@react-navigation/native';
-import type { PoiProvider, PoiType } from '../api/pois';
+import type { PoiContact, PoiProvider, PoiType } from '../api/pois';
 
 /**
  * A single back-to-source link displayed in the POI detail "Sources" section.
- * Computed by the caller from `EnrichedPoi.providers_data` so the screen
- * doesn't need to know how to derive URLs per provider.
+ * Computed by the caller from `EnrichedPoi.sources` (each entry already
+ * carries its provider + canonical URL) so the screen doesn't need to know
+ * how to derive URLs per provider.
  */
 export interface PoiSourceLink {
   provider: PoiProvider;
@@ -66,6 +67,21 @@ export type DiscoverStackParamList = {
     lat?: number;
     lng?: number;
     description?: string;
+    /**
+     * Lead image used as the first carousel slide when present (before
+     * the gallery images, after the live map slide).
+     */
+    thumbnail?: string;
+    /**
+     * Additional gallery images, appended after `thumbnail` in the
+     * detail-screen carousel.
+     */
+    images?: string[];
+    /**
+     * Optional contact bundle — any non-empty field is rendered in the
+     * detail-screen "Contact" section.
+     */
+    contact?: PoiContact;
     /**
      * Canonical links back to each upstream provider for this POI.
      * Rendered as the "Sources" section. Empty/absent ⇒ section hidden.
