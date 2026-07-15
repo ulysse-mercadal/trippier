@@ -1,7 +1,24 @@
+# Trippier — production stack (VPS): pulls SHA-pinned images from GHCR.
+# The deploy pipeline sets IMAGE_TAG to the built commit and runs `up -d --wait`.
+#
+#   make prod-pull && make prod-up
+#
+# Requires OWNER, IMAGE_TAG and the app secrets in .env on the host.
+
+name: trippier
+
+x-defaults: &defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   db:
     image: postgres:15-alpine
-    restart: always
+    <<: *defaults
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -9,32 +26,37 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     expose:
-      - 5432
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   backend:
-    build:
-      context: ./backend
-    restart: always
+    image: ghcr.io/${OWNER:-ulysse-mercadal}/trippier-backend:${IMAGE_TAG:-latest}
+    <<: *defaults
+    env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
       PORT: 3000
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
+      - "${BACKEND_PORT:-3001}:3000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        API_URL: ${API_URL}
-    restart: always
+    image: ghcr.io/${OWNER:-ulysse-mercadal}/trippier-frontend:${IMAGE_TAG:-latest}
+    <<: *defaults
+    env_file: .env
     environment:
       API_URL: ${API_URL}
     ports:
       - "80:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
 
 volumes:
   postgres_data:

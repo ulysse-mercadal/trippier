@@ -1,0 +1,21 @@
+# Development overrides — auto-loaded by `docker compose up` (and `make dev`).
+# Runs the builder stage with source bind-mounts and hot reload; the base file's
+# `depends_on: db (service_healthy)` already gates startup, so no wait-on is needed.
+
+services:
+  backend:
+    build:
+      target: builder
+    command: sh -c "bunx prisma db push && bunx prisma db seed && bun run start:dev"
+    volumes:
+      - ./backend:/app:z
+      - /app/node_modules
+
+  frontend:
+    build:
+      target: builder
+    command: bun run dev
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+      - /app/.next
