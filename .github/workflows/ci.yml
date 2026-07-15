@@ -64,7 +64,9 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         working-directory: ./backend
-        run: bun install --frozen-lockfile
+        # Dependabot bumps package.json but doesn't update bun.lock, so allow a
+        # non-frozen fallback that regenerates the lock when it's stale.
+        run: bun install --frozen-lockfile || bun install
       - name: Generate Prisma Client
         working-directory: ./backend
         run: bunx prisma generate
@@ -109,7 +111,9 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         working-directory: ./frontend
-        run: bun install --frozen-lockfile
+        # Dependabot bumps package.json but doesn't update bun.lock, so allow a
+        # non-frozen fallback that regenerates the lock when it's stale.
+        run: bun install --frozen-lockfile || bun install
       - name: Lint
         working-directory: ./frontend
         run: bun run lint
@@ -132,7 +136,9 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         working-directory: ./mobile
-        run: bun install --frozen-lockfile
+        # Dependabot bumps package.json but doesn't update bun.lock, so allow a
+        # non-frozen fallback that regenerates the lock when it's stale.
+        run: bun install --frozen-lockfile || bun install
       - name: Lint
         working-directory: ./mobile
         run: bun run lint
@@ -152,7 +158,9 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         working-directory: ./mobile
-        run: bun install --frozen-lockfile
+        # Dependabot bumps package.json but doesn't update bun.lock, so allow a
+        # non-frozen fallback that regenerates the lock when it's stale.
+        run: bun install --frozen-lockfile || bun install
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
