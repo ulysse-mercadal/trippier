@@ -68,7 +68,7 @@ type SnapIndex = 0 | 1 | 2 | 3;
 
 const TABBAR_RESERVED = 96;
 const FETCH_LIMIT = 30;
-/** Idle window the camera has to settle before we hit /pois/search — at
+/** Idle window the camera has to settle before we hit /v1/pois/search — at
  *  ~500 ms a casual pan/zoom no longer fires a request on every frame,
  *  saving API credits while still feeling responsive once the user stops
  *  moving the map. */
@@ -288,7 +288,7 @@ const DiscoverScreen: React.FC = () => {
   }));
 
   /**
-   * Issues the `/pois/search` request against the public API.
+   * Issues the `/v1/pois/search` request against the public API.
    *
    * Older in-flight requests are aborted before a new one starts so a slow
    * earlier response can't overwrite a fresher one. Only HTTP status +
@@ -362,7 +362,7 @@ const DiscoverScreen: React.FC = () => {
         const message =
           err instanceof Error ? err.message : 'Could not reach the POI API';
         console.warn(
-          '[Discover] /pois/search failed',
+          '[Discover] /v1/pois/search failed',
           status ?? 'no-response',
           message,
         );
@@ -489,6 +489,9 @@ const DiscoverScreen: React.FC = () => {
         lat: poi.coords?.lat,
         lng: poi.coords?.lng,
         description: poi.description?.slice(0, DESCRIPTION_MAX_CHARS),
+        thumbnail: poi.thumbnail,
+        images: poi.images,
+        contact: poi.contact,
         sources: sources.length > 0 ? sources : undefined,
         wikidataId: extractWikidataId(poi),
       });

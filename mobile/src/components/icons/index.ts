@@ -48,6 +48,7 @@ export { default as Trash } from './Trash';
 export { default as Edit } from './Edit';
 export { default as Lock } from './Lock';
 export { default as Globe } from './Globe';
+export { default as ExternalLink } from './ExternalLink';
 export { default as Bell } from './Bell';
 export { default as Sun } from './Sun';
 export { default as Moon } from './Moon';

@@ -29,35 +29,46 @@ export const DISCOVER_DEFAULT_CENTER = {
 export const DISCOVER_DEFAULT_ZOOM = 14;
 
 /**
- * Chip filter offered above the POI list. The first entry sends no `types`
- * so the public API merges every provider.
+ * Chip filter offered above the POI list. Beyond the leading "For you" entry
+ * (which sends no `types`, letting the public API merge everything), there is
+ * one chip per public-API POI tag, so the filter row mirrors the `/v1/pois`
+ * taxonomy 1:1 and each chip narrows the search to that single `type`.
  */
 export interface DiscoverChip {
-  id: 'for-you' | 'food' | 'sights' | 'tonight';
+  id: 'for-you' | PoiType;
   label: string;
   types?: PoiType[];
 }
 
 export const DISCOVER_CHIPS: DiscoverChip[] = [
   { id: 'for-you', label: 'For you' },
-  { id: 'food', label: 'Food', types: ['eat', 'drink'] },
-  { id: 'sights', label: 'Sights', types: ['see'] },
-  { id: 'tonight', label: 'Tonight', types: ['drink', 'do'] },
+  { id: 'see', label: 'See', types: ['see'] },
+  { id: 'eat', label: 'Eat', types: ['eat'] },
+  { id: 'drink', label: 'Drink', types: ['drink'] },
+  { id: 'do', label: 'Do', types: ['do'] },
+  { id: 'buy', label: 'Buy', types: ['buy'] },
+  { id: 'sleep', label: 'Sleep', types: ['sleep'] },
 ];
 
 /**
- * Composes the v4 meta line shown under a POI name in the drawer.
+ * Composes the v4 meta line shown under a POI name in the drawer. The chip
+ * label is appended for context only when it adds information — a single-type
+ * chip (e.g. "Eat") already matches the POI type, so it is dropped to avoid a
+ * redundant "Eat · Eat".
  *
  * @param poi - The slim POI returned by the API.
  * @param chipLabel - The label of the currently selected filter chip.
- * @returns A short caption — "{type} · {chip}".
+ * @returns A short caption — "{type}" or "{type} · {chip}".
  */
 export function formatPoiMeta(poi: SlimPoi, chipLabel: string): string {
   const type = poi.type.charAt(0).toUpperCase() + poi.type.slice(1);
+  if (chipLabel.toLowerCase() === poi.type.toLowerCase()) {
+    return type;
+  }
   return `${type} · ${chipLabel}`;
 }
 
-/** Maximum radius accepted by the public `/pois/search` endpoint. */
+/** Maximum radius accepted by the public `/v1/pois/search` endpoint. */
 export const API_MAX_RADIUS_M = 50_000;
 
 /**

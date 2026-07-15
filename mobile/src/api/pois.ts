@@ -11,7 +11,7 @@ import axios, { AxiosInstance } from 'axios';
 import { POI_API_URL, POI_API_KEY } from '@env';
 
 /**
- * POI category, aligned with the public `/pois/search` taxonomy.
+ * POI category, aligned with the public `/v1/pois/search` taxonomy.
  */
 export type PoiType =
   | 'see'
@@ -22,6 +22,13 @@ export type PoiType =
   | 'sleep'
   | 'generic'
   | 'event';
+
+/**
+ * Class of a result — a place versus a time-bound event. Orthogonal to
+ * {@link PoiType}; every `/v1/pois/search` result carries one so places and
+ * events can be displayed separately.
+ */
+export type PointKind = 'poi' | 'event';
 
 /**
  * Identifier of a data source the public API merges from.
@@ -58,16 +65,17 @@ export interface PoiContact {
 }
 
 /**
- * Lightweight POI projection returned by `/pois/search/slim`.
+ * Lightweight POI projection returned by `/v1/pois/search/slim`.
  */
 export interface SlimPoi {
   name: string;
+  kind?: PointKind;
   type: PoiType;
   coords?: PoiCoordinates;
 }
 
 /**
- * Top-level body of `/pois/search/slim`.
+ * Top-level body of `/v1/pois/search/slim`.
  */
 export interface SlimResult {
   total: number;
@@ -75,33 +83,25 @@ export interface SlimResult {
 }
 
 /**
- * One per-provider POI record nested inside an EnrichedPoi's `providers_data`.
- * Only the fields the mobile app reads are typed; the backend may include more.
+ * One contributing source for an EnrichedPoi: the provider id plus the
+ * canonical URL clients can follow for richer detail on that source.
+ * Returned by `/v1/pois/search` as the `sources` array — replaces the previous
+ * `sources: string[]` + `providers_data` map shape.
  */
-export interface RawPoiData {
-  id: string;
-  name: string;
-  type: PoiType;
+export interface SourceLink {
   provider: PoiProvider;
-  coords?: PoiCoordinates;
-  description?: string;
-  contact?: PoiContact;
-  thumbnail?: string;
-  wikidata_id?: string;
-  /**
-   * Canonical link to this POI's page on the originating provider
-   * (e.g. https://www.openstreetmap.org/node/12345). Empty when the
-   * provider does not expose a stable browse URL.
-   */
-  source_url?: string;
+  url?: string;
 }
 
 /**
- * Final merged + scored POI returned by `/pois/search`.
+ * Final merged + scored POI returned by `/v1/pois/search`. All per-provider
+ * data is folded into the top-level fields; follow each `SourceLink.url`
+ * for more detail on that specific source.
  */
 export interface EnrichedPoi {
   id: string;
   name: string;
+  kind?: PointKind;
   type: PoiType;
   score: number;
   coords?: PoiCoordinates;
@@ -110,17 +110,16 @@ export interface EnrichedPoi {
   description?: string;
   contact?: PoiContact;
   thumbnail?: string;
-  sources: PoiProvider[];
   /**
-   * Per-provider raw POI records the enriched POI was merged from. Each
-   * entry exposes its own `source_url` plus any provider-specific metadata.
-   * Keyed by provider id.
+   * Gallery images — first one is the merged lead image, the rest are
+   * supporting visuals when the providers exposed them.
    */
-  providers_data?: Partial<Record<PoiProvider, RawPoiData>>;
+  images?: string[];
+  sources: SourceLink[];
 }
 
 /**
- * Top-level body of `/pois/search`.
+ * Top-level body of `/v1/pois/search`.
  */
 export interface SearchResult {
   total: number;
@@ -191,7 +190,7 @@ export async function searchPoisSlim(
   params: RadiusSearchParams,
   signal?: AbortSignal,
 ): Promise<SlimResult> {
-  const { data } = await client.get<SlimResult>('/pois/search/slim', {
+  const { data } = await client.get<SlimResult>('/v1/pois/search/slim', {
     params: toQuery(params),
     signal,
   });
@@ -209,7 +208,7 @@ export async function searchPois(
   params: RadiusSearchParams,
   signal?: AbortSignal,
 ): Promise<SearchResult> {
-  const { data } = await client.get<SearchResult>('/pois/search', {
+  const { data } = await client.get<SearchResult>('/v1/pois/search', {
     params: toQuery(params),
     signal,
   });
