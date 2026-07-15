@@ -75,6 +75,7 @@ export default function FilterBar({
   const [viewMode, setViewMode] = useState<'search' | 'maps'>('search');
   const [selectedMapId, setSelectedMapId] = useState<number | null>(null);
 
+  // Sync mobileState with props during render to avoid cascading renders
   const [prevPoi, setPrevPoi] = useState(selectedPoi);
   const [prevWiki, setPrevWiki] = useState(isWikiVisible);
   const [prevExpanded, setPrevExpanded] = useState(isExpanded);
@@ -83,6 +84,7 @@ export default function FilterBar({
     setPrevPoi(selectedPoi);
     setPrevWiki(isWikiVisible);
     setPrevExpanded(isExpanded);
+
     if (isSmallScreen) {
       if (selectedPoi) {
         setMobileState(isWikiVisible ? 'low' : 'high');

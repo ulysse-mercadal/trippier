@@ -50,6 +50,7 @@ export default function DiscoverPage() {
   const [resultZones, setResultZones] = useState<GeoJSON.FeatureCollection | null>(null);
   const [searchZone, setSearchZone] = useState<string | null>(null);
   const [maps, setMaps] = useState<MapType[]>([]);
+  const [wikiUrl, setWikiUrl] = useState<string | null>(null);
   const lastCoords = useRef({ lat: 48.8584, lng: 2.2945 });
   const lastFetchedCoords = useRef<{ lat: number; lng: number } | null>(null);
   const loadingCount = useRef(0);
