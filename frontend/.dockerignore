@@ -3,8 +3,13 @@ node_modules
 out
 build
 npm-debug.log
+
+# Not needed in the build context
 .git
 .gitignore
-Dockerfile
-docker-compose.yaml
-.env.example
+.env
+.env.*
+*.md
+Dockerfile*
+.dockerignore
+docker-compose*.yaml

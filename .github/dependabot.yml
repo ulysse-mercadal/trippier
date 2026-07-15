@@ -1,0 +1,61 @@
+version: 2
+
+updates:
+  # GitHub Actions used by the workflows
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # backend (NestJS) — minor/patch grouped, majors raised individually
+  - package-ecosystem: npm
+    directory: "/backend"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    open-pull-requests-limit: 5
+    groups:
+      backend:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # frontend (Next.js)
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    open-pull-requests-limit: 5
+    groups:
+      frontend:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # mobile (React Native)
+  - package-ecosystem: npm
+    directory: "/mobile"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    open-pull-requests-limit: 5
+    groups:
+      mobile:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # Base images referenced in the Dockerfiles
+  - package-ecosystem: docker
+    directories:
+      - "/backend"
+      - "/frontend"
+      - "/docker/builder-apk"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    groups:
+      docker:
+        patterns: ["*"]

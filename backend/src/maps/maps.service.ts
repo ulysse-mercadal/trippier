@@ -7,7 +7,12 @@
 //
 // **************************************************************************
 
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateMapDto } from './dto/update-map.dto';
@@ -471,6 +476,9 @@ export class MapsService {
     lng: number,
     radius: number = 1,
   ): Promise<(PointOfInterest & { place_id: string; distance: number })[]> {
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180 || radius <= 0 || radius > 100) {
+      throw new BadRequestException('Invalid coordinates or radius (max 100km)');
+    }
     const pois = await this.prisma.$queryRaw<(PointOfInterest & { distance: number })[]>(
       Prisma.sql`
         SELECT DISTINCT ON (poi.id)

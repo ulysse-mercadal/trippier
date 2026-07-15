@@ -19,6 +19,7 @@ import {
   Request,
   ParseIntPipe,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { MapsService } from './maps.service';
 import { CreateMapDto } from './dto/create-map.dto';
@@ -27,14 +28,8 @@ import { AddPoiDto } from './dto/add-poi.dto';
 import { UpdatePoiDto } from './dto/update-poi.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
 import { Map } from '@prisma/client';
-
-interface RequestWithUser extends ExpressRequest {
-  user: {
-    id: number;
-  };
-}
+import { RequestWithUser } from '../common/request-with-user.interface';
 
 @ApiTags('maps')
 @Controller('maps')
@@ -51,12 +46,17 @@ export class MapsController {
     @Query('lng') lng: string,
     @Query('radius') radius?: string,
   ) {
-    return await this.mapsService.findNearbyPois(
-      req.user.id,
-      parseFloat(lat),
-      parseFloat(lng),
-      radius ? parseFloat(radius) : undefined,
-    );
+    const parsedLat = parseFloat(lat);
+    const parsedLng = parseFloat(lng);
+    const parsedRadius = radius ? parseFloat(radius) : undefined;
+    if (
+      isNaN(parsedLat) ||
+      isNaN(parsedLng) ||
+      (parsedRadius !== undefined && isNaN(parsedRadius))
+    ) {
+      throw new BadRequestException('lat, lng, and radius must be valid numbers');
+    }
+    return await this.mapsService.findNearbyPois(req.user.id, parsedLat, parsedLng, parsedRadius);
   }
 
   @Get('other/:userid')

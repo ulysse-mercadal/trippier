@@ -14,6 +14,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  NotFoundException,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -23,14 +24,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-
-interface RequestWithUser extends Request {
-  user: {
-    id: number;
-    email: string;
-    role: string;
-  };
-}
+import { RequestWithUser } from '../common/request-with-user.interface';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -65,6 +59,9 @@ export class AuthController {
   @Get('me')
   async getProfile(@Request() req: RequestWithUser) {
     const user = await this.usersService.findOne(req.user.id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     return user;
   }
 }
