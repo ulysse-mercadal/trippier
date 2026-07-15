@@ -31,8 +31,8 @@ try {
 const nextConfig: NextConfig = {
   env: {
     API_URL: process.env.API_URL,
-    MAPTILER_API_KEY: process.env.MAPTILER_API_KEY,
-    MAPTILER_MAP_ID: process.env.MAPTILER_MAP_ID,
+    MAPTILER_API_KEY: process.env.NEXT_PUBLIC_MAPTILER_API_KEY || process.env.MAPTILER_API_KEY,
+    MAPTILER_MAP_ID: process.env.NEXT_PUBLIC_MAPTILER_MAP_ID || process.env.MAPTILER_MAP_ID,
   },
 };
 
