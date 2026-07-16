@@ -40,6 +40,19 @@ header.rules.header.meta = {
   ],
 };
 
+// eslint-plugin-header is unmaintained and still calls context.getSourceCode(),
+// which ESLint 10 removed. Bridge it to context.sourceCode so the rule keeps working.
+const originalHeaderCreate = header.rules.header.create;
+header.rules.header.create = (context) =>
+  originalHeaderCreate(
+    context.getSourceCode
+      ? context
+      : new Proxy(context, {
+          get: (target, prop) =>
+            prop === 'getSourceCode' ? () => target.sourceCode : target[prop],
+        }),
+  );
+
 export default tseslint.config(
   {
     ignores: ['eslint.config.mjs'],
