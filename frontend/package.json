@@ -15,7 +15,7 @@
     "clsx": "^2.1.1",
     "emoji-picker-react": "^4.17.1",
     "framer-motion": "^12.26.2",
-    "maplibre-gl": "^5.0.0",
+    "maplibre-gl": "^6.0.0",
     "next": "16.2.10",
     "react": "19.2.7",
     "react-dom": "19.2.7",
